@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillForge - Academic Courses</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #f8fafc; }
+        .glass-sidebar { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.5); }
+        .sidebar-active { background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
+        .parallax-blob { position: fixed; filter: blur(90px); opacity: 0.5; z-index: -1; }
+        
+        /* Modal Transition */
+        .modal-overlay { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-active { opacity: 1 !important; pointer-events: auto !important; }
+        .modal-content-active { transform: scale(1) !important; }
+        
+        /* Accordion */
+        .module-content { transition: max-height 0.3s ease-out, opacity 0.3s ease-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .module-content.open { max-height: 500px; opacity: 1; }
+    </style>
+</head>
+<body class="h-screen flex relative selection:bg-indigo-100 selection:text-indigo-900 text-slate-600">
+
+    <div class="parallax-blob bg-indigo-300 w-[600px] h-[600px] rounded-full top-[-200px] left-[-200px]"></div>
+    <div class="parallax-blob bg-purple-200 w-[500px] h-[500px] rounded-full bottom-[-100px] right-[-100px]"></div>
+
+    <!-- START TEST CONFIRMATION MODAL -->
+    <div id="startTestModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm opacity-0 pointer-events-none">
+        <div id="startTestContent" class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 transform scale-95 border border-white/60 text-center">
+            <div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                <i data-lucide="timer" class="w-8 h-8 text-indigo-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Start Assessment?</h2>
+            <p class="text-slate-500 text-sm mb-8 leading-relaxed">
+                You are about to enter a secure testing environment. This will open in full screen mode.
+            </p>
+            <div class="flex gap-3">
+                <button onclick="closeStartModal()" class="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition">Cancel</button>
+                <button onclick="proceedToTest()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition">Yes, Start</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="hidden md:flex flex-col w-72 h-[96%] m-3 rounded-2xl glass-sidebar shadow-2xl shadow-indigo-100/50 z-20 sticky top-3">
+        <div class="h-24 flex items-center px-8">
+            <span class="text-2xl font-bold text-slate-900">SkillForge</span>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-2">
+            <a href="../navigation.html" class="flex items-center px-5 py-3.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-all"><i data-lucide="arrow-left" class="w-5 h-5 mr-3"></i> Back to Command Centre</a>
+            <a href="student_dashboard.html" class="flex items-center px-5 py-3.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all"><i data-lucide="layout-grid" class="w-5 h-5 mr-3"></i> Dashboard</a>
+            <a href="#" class="sidebar-active flex items-center px-5 py-3.5 text-sm font-semibold rounded-xl transition-all"><i data-lucide="book-open" class="w-5 h-5 mr-3"></i> College Courses</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden relative z-10" id="mainContainer">
+        <header class="h-24 flex items-center justify-between px-10 z-10 shrink-0">
+            <div><h2 class="text-2xl font-bold text-slate-900">Core Curriculum</h2></div>
+        </header>
+
+        <div class="px-10 mb-6 flex gap-6 border-b border-slate-200">
+            <button onclick="switchTab('catalog')" id="tabCatalog" class="pb-3 border-b-2 border-indigo-600 text-indigo-600 font-bold text-sm">Course Catalog</button>
+            <button onclick="switchTab('enrolled')" id="tabEnrolled" class="pb-3 border-b-2 border-transparent text-slate-500 font-bold text-sm">My Enrolled Courses</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-10 pb-10">
+            <div id="viewCatalog" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            <div id="viewEnrolled" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+    </main>
+
+    <!-- COURSE VIEWER / OUTLINE OVERLAY -->
+    <div id="courseViewer" class="fixed inset-0 bg-white z-50 transform translate-y-full flex flex-col transition-transform duration-300">
+        <div class="h-16 border-b border-slate-200 flex justify-between items-center px-6 bg-slate-50">
+            <div class="flex items-center gap-4">
+                <button onclick="closeViewer()" class="p-2 hover:bg-slate-200 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                <h3 class="font-bold text-lg text-slate-800" id="viewerTitle">Course</h3>
+            </div>
+        </div>
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Sidebar: Modules -->
+            <div class="w-full max-w-md mx-auto mt-10 overflow-y-auto p-4 space-y-2" id="viewerSidebar">
+                <!-- Modules List -->
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        lucide.createIcons();
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAaoUIwYSTO_JibEJ-Qf8SleuwcUMWibFs",
+  authDomain: "skillforge-1c07c.firebaseapp.com",
+  projectId: "skillforge-1c07c",
+  storageBucket: "skillforge-1c07c.firebasestorage.app",
+  messagingSenderId: "246800623841",
+  appId: "1:246800623841:web:67994cb0a958ca292defa0",
+  measurementId: "G-HET9CWW79Z"
+};
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let allCourses = [];
+        let enrolledIds = [];
+        let selectedQuestion = null; // Stores data to pass to test page
+        const fallbackAcademicCourses = [
+            {
+                id: 'acad-c-programming',
+                title: 'C Programming Fundamentals',
+                modules: [
+                    { title: 'Syntax and Variables', questions: [{ text: 'Write a C program that prints Hello, World!', input: '-', output: 'Hello, World!', type: 'code', testCases: [{ input: '-', output: 'Hello, World!' }] }] },
+                    { title: 'Loops and Conditions', questions: [{ text: 'Write a program to print numbers from 1 to 5.', input: '-', output: '1 2 3 4 5', type: 'code', testCases: [{ input: '-', output: '1 2 3 4 5' }] }] }
+                ]
+            },
+            {
+                id: 'acad-dsa',
+                title: 'Data Structures',
+                modules: [
+                    { title: 'Arrays', questions: [{ text: 'What is the time complexity of accessing an array element by index?', options: ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], type: 'mcq' }] },
+                    { title: 'Stacks and Queues', questions: [{ text: 'Which data structure follows FIFO?', options: ['Stack', 'Queue', 'Tree', 'Graph'], type: 'mcq' }] }
+                ]
+            },
+            {
+                id: 'acad-dbms',
+                title: 'Database Management Systems',
+                modules: [
+                    { title: 'SQL Basics', questions: [{ text: 'Which SQL command is used to retrieve data?', options: ['GET', 'SELECT', 'FETCHROW', 'OPEN'], type: 'mcq' }] }
+                ]
+            },
+            {
+                id: 'acad-os',
+                title: 'Operating Systems',
+                modules: [
+                    { title: 'Processes and Threads', questions: [{ text: 'What is context switching?', options: ['Switching user accounts', 'Saving and restoring CPU state', 'Switching monitors', 'Changing file systems'], type: 'mcq' }] }
+                ]
+            },
+            {
+                id: 'acad-cn',
+                title: 'Computer Networks',
+                modules: [
+                    { title: 'OSI Model', questions: [{ text: 'Which layer handles routing?', options: ['Transport', 'Network', 'Session', 'Physical'], type: 'mcq' }] }
+                ]
+            },
+            {
+                id: 'acad-se',
+                title: 'Software Engineering',
+                modules: [
+                    { title: 'SDLC', questions: [{ text: 'Which model delivers software in small increments?', options: ['Waterfall', 'Incremental', 'Big Bang', 'V-Model'], type: 'mcq' }] }
+                ]
+            }
+        ];
+
+        async function seedAcademicCourses() {
+            try {
+                const snap = await db.collection('academic_courses').limit(1).get();
+                if (!snap.empty) return;
+
+                const batch = db.batch();
+                fallbackAcademicCourses.forEach((course) => {
+                    const ref = db.collection('academic_courses').doc(course.id);
+                    const { id, ...payload } = course;
+                    batch.set(ref, payload, { merge: true });
+                });
+                await batch.commit();
+            } catch (error) {
+                console.warn('Could not seed academic courses:', error);
+            }
+        }
+
+        async function loadAcademicCourses() {
+            try {
+                await seedAcademicCourses();
+                const snap = await db.collection('academic_courses').get();
+                allCourses = snap.docs.length
+                    ? snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                    : fallbackAcademicCourses.map(course => ({ ...course }));
+            } catch (error) {
+                console.warn('Could not load academic courses, using fallback catalog:', error);
+                allCourses = fallbackAcademicCourses.map(course => ({ ...course }));
+            }
+        }
+
+        async function loadAcademicEnrollment(email) {
+            try {
+                const uDoc = await db.collection('students').doc(email).get();
+                if (uDoc.exists && uDoc.data().enrolledAcademic) {
+                    enrolledIds = uDoc.data().enrolledAcademic.map(c => c.id);
+                    return;
+                }
+            } catch (error) {
+                console.warn('Could not load academic enrollment from Firestore:', error);
+            }
+
+            const localAcademic = localStorage.getItem(`sf_enrolled_academic_${email}`);
+            enrolledIds = localAcademic ? JSON.parse(localAcademic).map(c => c.id) : [];
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            const email = user ? user.email : (localStorage.getItem('sf_user_email') || 'guest@skillforge.app');
+            await loadAcademicCourses();
+            await loadAcademicEnrollment(email);
+            renderLists();
+        });
+
+        function renderLists() {
+            const catalogDiv = document.getElementById('viewCatalog');
+            const enrolledDiv = document.getElementById('viewEnrolled');
+            catalogDiv.innerHTML = ''; enrolledDiv.innerHTML = '';
+
+            allCourses.forEach(c => {
+                const isEnrolled = enrolledIds.includes(c.id);
+                const btn = isEnrolled 
+                    ? `<button onclick="openCourseViewer('${c.id}')" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl">Start Learning</button>`
+                    : `<button onclick="enroll('${c.id}')" class="w-full py-3 border border-slate-200 text-slate-600 font-bold rounded-xl">Enroll Now</button>`;
+                
+                const card = `<div class="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-lg transition"><h3 class="text-lg font-bold text-slate-900 mb-4">${c.title}</h3>${btn}</div>`;
+                if(isEnrolled) enrolledDiv.innerHTML += card; else catalogDiv.innerHTML += card;
+            });
+        }
+
+        async function enroll(courseId) {
+            if (!enrolledIds.includes(courseId)) {
+                enrolledIds.push(courseId);
+            }
+            const user = firebase.auth().currentUser;
+            const email = user ? user.email : (localStorage.getItem('sf_user_email') || 'guest@skillforge.app');
+            const enrolledObjs = allCourses.filter(c => enrolledIds.includes(c.id));
+            try {
+                await db.collection('students').doc(email).set({ enrolledAcademic: enrolledObjs }, { merge: true });
+            } catch (error) {
+                console.warn('Could not sync academic enrollment, saving locally:', error);
+                localStorage.setItem(`sf_enrolled_academic_${email}`, JSON.stringify(enrolledObjs));
+            }
+            renderLists(); switchTab('enrolled');
+        }
+
+        function switchTab(tab) {
+            document.getElementById('viewCatalog').classList.add('hidden');
+            document.getElementById('viewEnrolled').classList.add('hidden');
+            document.getElementById('tabCatalog').className = "pb-3 border-b-2 border-transparent text-slate-500 font-bold text-sm";
+            document.getElementById('tabEnrolled').className = "pb-3 border-b-2 border-transparent text-slate-500 font-bold text-sm";
+            if(tab === 'catalog') { document.getElementById('viewCatalog').classList.remove('hidden'); document.getElementById('tabCatalog').className = "pb-3 border-b-2 border-indigo-600 text-indigo-600 font-bold text-sm"; } 
+            else { document.getElementById('viewEnrolled').classList.remove('hidden'); document.getElementById('tabEnrolled').className = "pb-3 border-b-2 border-indigo-600 text-indigo-600 font-bold text-sm"; }
+        }
+
+        // --- VIEWER LOGIC ---
+        async function openCourseViewer(courseId) {
+            document.getElementById('courseViewer').classList.remove('translate-y-full');
+            let data = allCourses.find(course => course.id === courseId);
+            try {
+                const doc = await db.collection('academic_courses').doc(courseId).get();
+                if (doc.exists) {
+                    data = { id: doc.id, ...doc.data() };
+                }
+            } catch (error) {
+                console.warn('Could not load course viewer from Firestore, using local data:', error);
+            }
+            if (!data) return;
+            document.getElementById('viewerTitle').innerText = data.title;
+            
+            const sidebar = document.getElementById('viewerSidebar');
+            sidebar.innerHTML = '';
+            
+            if (data.modules) {
+                data.modules.forEach((mod, idx) => {
+                    const modDiv = document.createElement('div');
+                    let qList = '';
+                    if(mod.questions) {
+                        mod.questions.forEach((q, qIdx) => {
+                            // Store question data in the button
+                            const qData = encodeURIComponent(JSON.stringify(q));
+                            qList += `<div onclick="promptTestStart('${qData}')" class="p-3 ml-4 text-sm bg-slate-50 border border-slate-100 rounded-lg cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition flex items-center gap-2">
+                                <i data-lucide="file-question" class="w-4 h-4"></i> Question ${qIdx+1}
+                            </div>`;
+                        });
+                    }
+                    modDiv.innerHTML = `<div class="font-bold text-slate-700 mb-2 mt-4">${mod.title}</div><div class="space-y-2">${qList}</div>`;
+                    sidebar.appendChild(modDiv);
+                });
+                lucide.createIcons();
+            }
+        }
+
+        function closeViewer() { document.getElementById('courseViewer').classList.add('translate-y-full'); }
+
+        // --- TEST START LOGIC ---
+        function promptTestStart(encodedData) {
+            selectedQuestion = JSON.parse(decodeURIComponent(encodedData));
+            const m = document.getElementById('startTestModal');
+            m.classList.add('modal-active');
+            document.getElementById('startTestContent').classList.add('modal-content-active');
+        }
+
+        function closeStartModal() {
+            document.getElementById('startTestModal').classList.remove('modal-active');
+            document.getElementById('startTestContent').classList.remove('modal-content-active');
+        }
+
+        function proceedToTest() {
+            // Save question data to LocalStorage to pass to next page
+            localStorage.setItem('activeTestQuestion', JSON.stringify(selectedQuestion));
+            window.location.href = 'test_environment.html';
+        }
+    </script>
+</body>
+</html>

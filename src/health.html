@@ -1,0 +1,1331 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillForge - Health Command Center</title>
+<link rel="stylesheet" href="window-controls.css">
+<style>
+/* Visual refresh variables: safer, incremental UI system */
+:root {
+    --bg: #eef6f1;
+    --panel: rgba(255, 255, 255, 0.92);
+    --text: #163127;
+    --muted: #6d8477;
+    --line: rgba(110, 140, 123, 0.18);
+    --shadow-soft: 0 12px 30px rgba(24, 52, 38, 0.08);
+    --shadow-card: 0 18px 42px rgba(24, 52, 38, 0.12);
+    --shadow-hover: 0 24px 48px rgba(24, 52, 38, 0.16);
+    --radius: 16px;
+    --radius-pill: 999px;
+    --good: #4f9b69;
+    --good-soft: rgba(79, 155, 105, 0.14);
+    --warning: #d8a12d;
+    --warning-soft: rgba(216, 161, 45, 0.18);
+    --critical: #c65a57;
+    --critical-soft: rgba(198, 90, 87, 0.16);
+    --sidebar-top: #173328;
+    --sidebar-bottom: #214635;
+    --accent: #5d9d74;
+    --accent2: #a8d7b8;
+    --fade: rgba(93, 157, 116, 0.14);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    font-family: Aptos, "Segoe UI Variable Display", "Trebuchet MS", sans-serif;
+    color: var(--text);
+    background:
+        radial-gradient(circle at 0 0, rgba(125, 181, 151, 0.2), transparent 28%),
+        radial-gradient(circle at 100% 0, rgba(201, 228, 210, 0.42), transparent 24%),
+        linear-gradient(180deg, #eef6f1, #e2eee6);
+    overflow: hidden;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+.titlebar {
+    background: rgba(255, 255, 255, 0.84);
+    backdrop-filter: blur(12px);
+}
+
+.app {
+    display: grid;
+    grid-template-columns: 248px 1fr;
+    height: calc(100vh - 32px);
+}
+
+/* Sidebar refinement: lower contrast with clearer active state */
+.app > aside {
+    background: linear-gradient(180deg, var(--sidebar-top), var(--sidebar-bottom));
+    color: #f8fafc;
+    padding: 24px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.app > aside .brand {
+    display: grid;
+    gap: 8px;
+}
+
+.badge {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(93, 157, 116, 0.32), rgba(168, 215, 184, 0.26));
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.brand p,
+.mini-note,
+.nav span {
+    color: rgba(226, 232, 240, 0.68);
+    line-height: 1.5;
+}
+
+.nav {
+    display: grid;
+    gap: 10px;
+}
+
+.nav button {
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.nav button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(2px);
+}
+
+.nav .active {
+    background: linear-gradient(135deg, rgba(93, 157, 116, 0.28), rgba(168, 215, 184, 0.14));
+    border-color: rgba(168, 215, 184, 0.26);
+    box-shadow: inset 0 0 0 1px rgba(168, 215, 184, 0.12);
+}
+
+.nav strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.coach {
+    margin-top: auto;
+    padding: 16px;
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+main {
+    overflow: auto;
+    padding: 28px;
+}
+
+.stack {
+    display: grid;
+    gap: 20px;
+}
+
+/* Card system: consistent radius, spacing, elevation */
+.panel,
+.hero-stat,
+.metric-card,
+.stat,
+.chart-wrap,
+.progress,
+.item,
+.table-wrap,
+.field input,
+.field select,
+.nav button {
+    border-radius: var(--radius);
+}
+
+.panel {
+    background: var(--panel);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(14px);
+}
+
+.hero {
+    padding: 26px;
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 18px;
+    background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.22), transparent 30%),
+        linear-gradient(135deg, #2c6a4f, #74b48c);
+    color: #f8fafc;
+}
+
+.pill {
+    display: inline-flex;
+    padding: 8px 12px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.hero h1 {
+    font-size: clamp(30px, 4vw, 48px);
+    line-height: 0.95;
+    max-width: 9ch;
+    margin-bottom: 12px;
+}
+
+.hero p {
+    color: rgba(241, 245, 249, 0.84);
+    line-height: 1.65;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.hero button {
+    border-radius: var(--radius-pill);
+    padding: 12px 16px;
+    border: 0;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.primary {
+    background: #fff;
+    color: #173829;
+}
+
+.secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.hero-stats {
+    display: grid;
+    gap: 12px;
+}
+
+.hero-stat {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: var(--shadow-soft);
+}
+
+.hero-stat span {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(241, 245, 249, 0.76);
+    margin-bottom: 6px;
+}
+
+.hero-stat strong {
+    display: block;
+    font-size: 30px;
+    margin-bottom: 4px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 16px;
+}
+
+/* Hover effects: light lift and stronger shadow */
+.metric-card,
+.stat,
+.item,
+.hero-stat {
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.metric-card {
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.96);
+    padding: 18px;
+    cursor: pointer;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+}
+
+.metric-card:hover,
+.stat:hover,
+.item:hover,
+.hero-stat:hover {
+    transform: translateY(-2px) scale(1.015);
+    box-shadow: var(--shadow-hover);
+}
+
+.metric-card.active {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-hover);
+}
+
+.metric-card::after {
+    content: "";
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    right: -34px;
+    bottom: -44px;
+    background: var(--fade);
+}
+
+.metric-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.metric-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.mark {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.7);
+    font-weight: 800;
+    color: var(--accent);
+}
+
+.chip {
+    padding: 7px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(24, 52, 38, 0.06);
+    color: var(--text);
+}
+
+.metric-name {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    font-size: 34px;
+    font-weight: 800;
+    margin: 6px 0 10px;
+    line-height: 1;
+}
+
+.metric-subtext {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.metric-progress {
+    height: 8px;
+    margin: 10px 0 12px;
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    background: rgba(110, 140, 123, 0.14);
+}
+
+.metric-progress-fill {
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px;
+}
+
+.tabs button {
+    border: 0;
+    background: transparent;
+    padding: 13px 16px;
+    border-radius: var(--radius);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.tabs button:hover {
+    background: rgba(93, 157, 116, 0.08);
+    color: var(--text);
+    transform: translateY(-1px);
+}
+
+.tabs button.active {
+    background: var(--fade);
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.layout,
+.layout-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.9fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.box {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.layout > section.panel.box,
+.layout-top > section.panel.box {
+    position: relative;
+    z-index: 2;
+    overflow: visible;
+}
+
+.layout > aside.side,
+.layout-top > aside.side {
+    position: relative;
+    z-index: 1;
+}
+
+.head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 18px;
+}
+
+.head p,
+.muted,
+.tbl-note {
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.head h2,
+.box h3 {
+    font-size: 30px;
+}
+
+.box h3 {
+    font-size: 26px;
+    margin-bottom: 8px;
+}
+
+.tag {
+    padding: 9px 12px;
+    border-radius: var(--radius);
+    background: var(--fade);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.stat {
+    padding: 18px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 250, 247, 0.9));
+    border: 1px solid rgba(110, 140, 123, 0.14);
+    box-shadow: var(--shadow-soft);
+}
+
+.stat span {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.stat strong {
+    display: block;
+    font-size: 28px;
+    margin-bottom: 6px;
+}
+
+.chart-wrap {
+    padding: 18px;
+    background: linear-gradient(180deg, rgba(247, 251, 248, 0.96), rgba(239, 246, 241, 0.88));
+    border: 1px solid rgba(110, 140, 123, 0.12);
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    box-shadow: 0 18px 38px rgba(24, 52, 38, 0.08);
+}
+
+.chart-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+/* Chart enhancement: smoother graph with tooltip support */
+.chart {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    min-height: 300px;
+    flex: 0 0 auto;
+    overflow: visible;
+}
+
+.chart svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.chart canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.chart-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, calc(-100% - 14px));
+    background: rgba(18, 41, 31, 0.94);
+    color: #f8fafc;
+    padding: 8px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 12px 28px rgba(12, 24, 18, 0.28);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 140ms ease;
+    white-space: nowrap;
+    z-index: 9999;
+}
+
+.chart-tooltip.visible {
+    opacity: 1;
+}
+
+.chart-tooltip.is-edge-right {
+    transform: translate(calc(-100% + 22px), calc(-100% - 14px));
+}
+
+.chart-tooltip.is-edge-left {
+    transform: translate(-22px, calc(-100% - 14px));
+}
+
+.chart-tooltip span {
+    display: block;
+    color: rgba(241, 245, 249, 0.72);
+    font-size: 11px;
+}
+
+.chart-dot {
+    transition: transform 140ms ease, opacity 140ms ease, r 140ms ease;
+}
+
+.chart-dot.is-dimmed {
+    opacity: 0.5;
+}
+
+.chart-dot.is-active {
+    filter: drop-shadow(0 0 10px rgba(93, 157, 116, 0.45));
+}
+
+.chart-hit {
+    cursor: pointer;
+}
+
+.labels {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.chart-label {
+    padding-top: 10px;
+    border-top: 1px solid rgba(110, 140, 123, 0.14);
+    text-align: center;
+    font-size: 12px;
+    border-radius: 12px;
+    transition: background 140ms ease, color 140ms ease;
+}
+
+.chart-label strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.chart-label.is-active {
+    background: rgba(93, 157, 116, 0.08);
+    color: var(--accent);
+}
+
+/* Context cards: grouped below the graph with varied emphasis and less repetition */
+.step-insights-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    grid-template-areas:
+        "weekly gap"
+        "comparison comparison";
+    grid-template-rows: auto auto;
+    gap: 16px;
+    margin-top: 18px;
+    align-content: start;
+}
+
+.step-insight-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 14px;
+    min-height: 148px;
+    padding: 18px;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(244, 249, 246, 0.86));
+    border: 1px solid rgba(110, 140, 123, 0.12);
+    box-shadow: var(--shadow-soft);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.step-insight-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 38px rgba(24, 52, 38, 0.1);
+}
+
+.step-insight-card h3 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.2;
+}
+
+.step-insight-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.step-insight-card--weekly {
+    grid-area: weekly;
+    background: linear-gradient(180deg, rgba(249, 251, 250, 0.98), rgba(243, 248, 245, 0.88));
+}
+
+/* Weekly insights becomes a compact stat board */
+.step-insight-card--weekly .step-insight-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.step-insight-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+}
+
+.step-insight-card--weekly .step-insight-line {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 8px;
+    min-height: 74px;
+    padding: 14px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(248, 251, 249, 0.96), rgba(240, 247, 243, 0.88));
+    border: 1px solid rgba(110, 140, 123, 0.1);
+}
+
+.step-insight-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.step-insight-icon {
+    font-size: 13px;
+    line-height: 1;
+    opacity: 0.78;
+}
+
+.step-insight-line span {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.step-insight-line strong {
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 800;
+    text-align: right;
+    line-height: 1.25;
+}
+
+.step-insight-card--weekly .step-insight-line strong {
+    font-size: 18px;
+    text-align: left;
+}
+
+.step-insight-card--gap {
+    grid-area: gap;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 247, 242, 0.92));
+    border-color: rgba(93, 157, 116, 0.16);
+    box-shadow: var(--shadow-card);
+    min-height: 0;
+}
+
+.step-insight-card--gap .step-insight-list {
+    gap: 12px;
+}
+
+.step-insight-card--gap .step-insight-line {
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(110, 140, 123, 0.08);
+    align-items: flex-start;
+}
+
+.step-insight-card--gap .step-insight-line strong {
+    max-width: 62%;
+    font-size: 15px;
+    line-height: 1.35;
+}
+
+.step-insight-card--comparison {
+    grid-area: comparison;
+    background: linear-gradient(180deg, rgba(248, 251, 249, 0.98), rgba(242, 247, 244, 0.9));
+    min-height: 260px;
+    box-shadow: var(--shadow-card);
+}
+
+.step-insight-card--comparison .step-insight-list {
+    gap: 12px;
+}
+
+.step-insight-card--comparison .step-insight-line {
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(110, 140, 123, 0.08);
+}
+
+.comparison-visual {
+    margin-top: 4px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(110, 140, 123, 0.1);
+    background:
+        radial-gradient(circle at right top, rgba(168, 215, 184, 0.18), transparent 42%),
+        linear-gradient(180deg, rgba(250, 252, 251, 0.95), rgba(241, 247, 243, 0.86));
+}
+
+.comparison-visual-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.comparison-visual-head span {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.comparison-badge {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(93, 157, 116, 0.14);
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.comparison-badge.is-down {
+    background: rgba(198, 90, 87, 0.12);
+    color: var(--critical);
+}
+
+.comparison-bars {
+    display: grid;
+    gap: 14px;
+}
+
+.comparison-row {
+    display: grid;
+    gap: 8px;
+}
+
+.comparison-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+}
+
+.comparison-meta span {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.comparison-meta strong {
+    font-size: 15px;
+    color: var(--text);
+}
+
+.comparison-track {
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(93, 157, 116, 0.12);
+    overflow: hidden;
+}
+
+.comparison-track--soft {
+    background: rgba(110, 140, 123, 0.1);
+}
+
+.comparison-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 180ms ease;
+}
+
+.comparison-fill--current {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.comparison-fill--previous {
+    background: linear-gradient(90deg, rgba(93, 157, 116, 0.52), rgba(168, 215, 184, 0.84));
+}
+
+.step-insight-note {
+    margin-top: 6px;
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 14px;
+    padding: 12px 14px 0 14px;
+    border-top: 1px solid rgba(110, 140, 123, 0.1);
+    background: linear-gradient(180deg, rgba(250, 252, 251, 0.82), rgba(243, 248, 245, 0.62));
+    border-radius: 14px;
+}
+
+.side {
+    display: grid;
+    gap: 18px;
+    color: var(--text);
+}
+
+.side h3,
+.side strong,
+.field label,
+.progress-top span {
+    color: var(--text);
+}
+
+.form {
+    display: grid;
+    gap: 12px;
+}
+
+.field {
+    display: grid;
+    gap: 6px;
+}
+
+.field label {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.field input,
+.field select {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid rgba(110, 140, 123, 0.24);
+    background: #fff;
+    color: var(--text);
+    box-shadow: inset 0 1px 2px rgba(16, 24, 20, 0.03);
+}
+
+.save {
+    border: 0;
+    border-radius: var(--radius-pill);
+    padding: 13px 16px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(93, 157, 116, 0.22);
+}
+
+.progress {
+    margin-top: 14px;
+    padding: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 250, 246, 0.84));
+    border: 1px solid rgba(110, 140, 123, 0.14);
+}
+
+.progress-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.track {
+    height: 12px;
+    border-radius: var(--radius-pill);
+    background: rgba(110, 140, 123, 0.16);
+    overflow: hidden;
+}
+
+.fill {
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.fill.warning,
+.metric-progress-fill.warning,
+.weekly-fill.warning {
+    background: linear-gradient(90deg, #d9a63b, #f2cf79);
+}
+
+.fill.critical,
+.metric-progress-fill.critical,
+.weekly-fill.critical {
+    background: linear-gradient(90deg, #c65a57, #e59791);
+}
+
+.fill.good,
+.metric-progress-fill.good,
+.weekly-fill.good {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.list {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.item {
+    padding: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 250, 246, 0.84));
+    border: 1px solid rgba(110, 140, 123, 0.14);
+    box-shadow: var(--shadow-soft);
+}
+
+.history,
+.layout-bottom {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr);
+    gap: 18px;
+    margin-top: 18px;
+    align-items: start;
+}
+
+.table-wrap {
+    overflow: auto;
+    border: 1px solid rgba(110, 140, 123, 0.14);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.84);
+}
+
+th,
+td {
+    padding: 13px 14px;
+    border-bottom: 1px solid rgba(110, 140, 123, 0.12);
+    text-align: left;
+    white-space: nowrap;
+}
+
+th {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: rgba(247, 251, 248, 0.92);
+}
+
+tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Status palette: green, yellow, red */
+.status {
+    display: inline-flex;
+    padding: 6px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.good {
+    background: var(--good-soft);
+    color: var(--good);
+}
+
+.warning,
+.neutral {
+    background: var(--warning-soft);
+    color: #966d12;
+}
+
+.critical,
+.alert {
+    background: var(--critical-soft);
+    color: var(--critical);
+}
+
+.tip::before {
+    content: "";
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: var(--accent);
+}
+
+.tip {
+    position: relative;
+    overflow: hidden;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.chips span {
+    padding: 8px 11px;
+    border-radius: var(--radius-pill);
+    background: var(--fade);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* Insights and gamification: compact utility panel */
+.insight-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.insight-stat {
+    padding: 14px;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 250, 246, 0.88));
+    border: 1px solid rgba(110, 140, 123, 0.12);
+}
+
+.insight-stat span {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.insight-stat strong {
+    display: block;
+    font-size: 24px;
+}
+
+.weekly-track {
+    margin-top: 14px;
+}
+
+.weekly-track-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.weekly-bar {
+    height: 10px;
+    background: rgba(110, 140, 123, 0.16);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+}
+
+.weekly-fill {
+    height: 100%;
+    width: 0;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.foot {
+    color: var(--muted);
+    font-size: 12px;
+    text-align: right;
+}
+
+@media (max-width: 1320px) {
+    .cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .layout,
+    .history {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1080px) {
+    .app {
+        grid-template-columns: 1fr;
+    }
+
+    .app > aside {
+        display: none;
+    }
+
+    .hero {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    main {
+        padding: 16px;
+    }
+
+    .cards,
+    .stats,
+    .labels,
+    .insight-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .head,
+    .chart-head,
+    .progress-top,
+    .weekly-track-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 520px) {
+    .cards,
+    .stats,
+    .labels,
+    .insight-summary,
+    .step-insights-row {
+        grid-template-columns: 1fr;
+    }
+
+    .step-insights-row {
+        grid-template-areas:
+            "weekly"
+            "gap"
+            "comparison";
+    }
+}
+</style>
+</head>
+<body>
+<div class="titlebar">SkillForge Health Command Center</div>
+<div class="window-controls">
+<button class="window-control minimize" onclick="minimizeWindow()" aria-label="Minimize"><span class="minimize-icon"></span></button>
+<button class="window-control maximize" onclick="maximizeWindow()" aria-label="Maximize"><span class="maximize-icon"></span></button>
+<button class="window-control close" onclick="closeWindow()" aria-label="Close"><span class="close-icon"></span></button>
+</div>
+<div class="app">
+<aside>
+<div class="brand"><div class="badge">SF</div><h2>Health Hub</h2><p>Switch tabs for full weekly history, guided ranges, and quick guidance.</p></div>
+<div class="nav">
+<button onclick="location.href='navigation.html'"><strong>Back to Command Centre</strong><span>Return to your main SkillForge home</span></button>
+<button class="active" type="button"><strong>Health Command Center</strong><span>Interactive weekly analytics</span></button>
+<button type="button" onclick="showComingSoon('Diet planner is next on the roadmap.')"><strong>Diet Planner</strong><span>Meals, macros, hydration</span></button>
+<button type="button" onclick="showComingSoon('Recovery planner is coming soon.')"><strong>Recovery Planner</strong><span>Stretching and reset routines</span></button>
+</div>
+<div class="coach"><strong>Today&apos;s cue</strong><p id="coachText" class="mini-note">You are above your weekly step average. A short evening walk could finish the day beautifully.</p></div>
+</aside>
+<main>
+<div class="stack">
+<section class="panel hero">
+<div><div class="pill">Desktop wellness cockpit</div><h1>Track the whole week, not one number.</h1><p>Click any metric card or tab to open a richer view with weekly charts, goal controls where they apply, and daily coaching.</p><div class="hero-actions"><button class="primary" onclick="scrollToHistory()">Open weekly history</button><button class="secondary" type="button" onclick="location.href='navigation.html'">Back to Command Centre</button><button class="secondary" id="heroSecondaryBtn" onclick="focusTarget()">Edit target</button></div></div>
+<div class="hero-stats"><div class="hero-stat"><span>Wellness score</span><strong id="heroScore">86</strong><p id="heroScoreText">Four of six metrics are in a strong zone today.</p></div><div class="hero-stat"><span>Goal streak</span><strong id="heroStreak">5 days</strong><p id="heroStreakText">You are building consistency, not just one-off wins.</p></div><div class="hero-stat"><span>Active metric</span><strong id="heroMetric">Steps</strong><p id="heroMetricText">Targets and charts update as you switch tabs.</p></div></div>
+</section>
+<section class="cards" id="cards"></section>
+<section class="panel tabs" id="tabs"></section>
+<div class="layout layout-top">
+<section class="panel box"><div class="head"><div><div class="pill" id="eyebrow">Metric dashboard</div><h2 id="title">Steps</h2><p id="desc"></p></div><div class="tag" id="trendTag">On track</div></div><div class="stats" id="stats"></div><div class="chart-wrap"><div class="chart-head"><div><strong id="chartTitle">Last 7 days</strong><div class="tbl-note" id="chartSub"></div></div><div class="tbl-note" id="chartToday"></div></div><div class="chart" id="chart"></div><div class="labels" id="labels"></div></div><!-- Context-aware summary group: same placement, but titles and labels switch with the active metric --><div class="step-insights-row" id="stepInsightsRow"><section class="step-insight-card step-insight-card--weekly"><h3 id="contextWeeklyTitle">Weekly insights</h3><div class="step-insight-list"><div class="step-insight-line"><div class="step-insight-label"><span class="step-insight-icon" id="contextBestIcon" aria-hidden="true">🏆</span><span id="contextBestLabel">Best day</span></div><strong id="stepBestDay">-</strong></div><div class="step-insight-line"><div class="step-insight-label"><span class="step-insight-icon" id="contextLowestIcon" aria-hidden="true">⚠️</span><span id="contextLowestLabel">Lowest day</span></div><strong id="stepLowestDay">-</strong></div><div class="step-insight-line"><div class="step-insight-label"><span id="contextAverageLabel">Weekly average</span></div><strong id="stepWeeklyAverage">-</strong></div><div class="step-insight-line"><div class="step-insight-label"><span class="step-insight-icon" id="contextTrendIcon" aria-hidden="true">📈</span><span id="contextTrendLabel">Trend</span></div><strong id="stepTrend">-</strong></div></div></section><section class="step-insight-card step-insight-card--gap"><h3 id="contextGapTitle">Goal gap</h3><div class="step-insight-list"><div class="step-insight-line"><div class="step-insight-label"><span id="contextTargetCompareLabel">Average vs target</span></div><strong id="stepTargetCompare">-</strong></div><div class="step-insight-line"><div class="step-insight-label"><span id="contextGapLabel">Difference</span></div><strong id="stepTargetGap">-</strong></div></div><p class="step-insight-note" id="stepGapSuggestion">-</p></section><section class="step-insight-card step-insight-card--comparison"><h3 id="contextComparisonTitle">Weekly comparison</h3><div class="step-insight-list"><div class="step-insight-line"><div class="step-insight-label"><span id="contextThisWeekLabel">This week average</span></div><strong id="stepThisWeekAverage">-</strong></div><div class="step-insight-line"><div class="step-insight-label"><span id="contextLastWeekLabel">Last week average</span></div><strong id="stepLastWeekAverage">-</strong></div><div class="step-insight-line"><div class="step-insight-label"><span id="contextDiffLabel">Difference</span></div><strong id="stepPercentDiff">-</strong></div></div><div class="comparison-visual"><div class="comparison-visual-head"><span>Weekly pace</span><div class="comparison-badge" id="comparisonBadge">+0%</div></div><div class="comparison-bars"><div class="comparison-row"><div class="comparison-meta"><span id="comparisonCurrentLabel">This week</span><strong id="comparisonCurrentValue">-</strong></div><div class="comparison-track"><div class="comparison-fill comparison-fill--current" id="comparisonCurrentFill"></div></div></div><div class="comparison-row"><div class="comparison-meta"><span id="comparisonPreviousLabel">Last week</span><strong id="comparisonPreviousValue">-</strong></div><div class="comparison-track comparison-track--soft"><div class="comparison-fill comparison-fill--previous" id="comparisonPreviousFill"></div></div></div></div></div><p class="step-insight-note" id="stepComparisonNote">-</p></section></div></section>
+<aside class="side">
+<section class="panel box" id="settingsPanel"><h3 id="settingsTitle">Daily target</h3><p class="muted" id="settingsText">Save your target locally for this device.</p><div class="form"><div class="field"><label for="targetInput" id="targetLabel">Target</label><input id="targetInput" type="number"></div><div class="field"><label for="reminder">Reminder</label><select id="reminder"><option>07:00</option><option>08:00</option><option>12:00</option><option>18:00</option><option>21:00</option></select></div><div class="field"><label for="mode">Plan mode</label><select id="mode"><option value="maintain">Maintain balance</option><option value="improve">Push for gains</option><option value="recovery">Recovery focus</option></select></div><button class="save" id="saveBtn" type="button">Save target</button><div class="tbl-note" id="saveNote">Saved targets stay local to this Electron app.</div></div><div class="progress"><div class="progress-top"><strong id="progressTitle">Today vs target</strong><span id="progressPct">0%</span></div><div class="track"><div class="fill" id="progressFill"></div></div><div class="tbl-note" id="progressText" style="margin-top:10px"></div></div></section>
+<section class="panel box"><h3 id="breakdownTitle">Today&apos;s breakdown</h3><p class="muted" id="breakdownText">See what shaped today&apos;s number.</p><div class="list" id="breakdown"></div></section>
+<!-- Smart suggestions: reuses existing data without changing app structure -->
+<section class="panel box"><h3 id="insightsTitle">Smart suggestions</h3><p class="muted" id="insightsText">Simple nudges based on today&apos;s reading and the last seven days.</p><div class="insight-summary"><div class="insight-stat"><span>Current streak</span><strong id="streakCount">0 days</strong></div><div class="insight-stat"><span>Weekly goal</span><strong id="weeklyGoalText">0/7 days</strong></div></div><div class="weekly-track"><div class="weekly-track-head"><strong>Weekly consistency</strong><span id="weeklyGoalPct">0%</span></div><div class="weekly-bar"><div class="weekly-fill" id="weeklyGoalFill"></div></div></div><div class="list" id="insights"></div></section>
+</aside>
+</div>
+<div class="history layout-bottom" id="historySection">
+<section class="panel box"><div class="head"><div><h3 id="historyTitle">Weekly history</h3><p class="tbl-note" id="historyText">Daily records from the last seven days.</p></div><div class="tag" id="rangeTag">7 day log</div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Value</th><th id="historyGoalHead">Target</th><th>Status</th><th>Note</th></tr></thead><tbody id="historyBody"></tbody></table></div></section>
+<section class="panel box"><div class="head"><div><h3 id="tipsTitle">Action cues</h3><p class="tbl-note" id="tipsText">Practical next steps for today.</p></div><div class="tag" id="statusTag">Balanced</div></div><div class="list" id="tips"></div><div class="chips" id="chips"></div></section>
+</div>
+<div class="foot">Daily goals are stored locally for planning metrics like steps, calories, and sleep.</div>
+</div>
+</main>
+</div>
+<script>
+const { ipcRenderer } = require('electron');
+const $ = (id) => document.getElementById(id);
+const STORAGE_KEY = 'skillforge-health-dashboard-v1';
+const week = Array.from({length:7},(_,i)=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(6-i));return{short:new Intl.DateTimeFormat('en-US',{weekday:'short'}).format(d),long:new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric'}).format(d)}});
+const metrics={steps:{name:'Steps',mark:'ST',accent:'#5d9d74',accent2:'#a8d7b8',fade:'rgba(93,157,116,.14)',unit:'steps',min:1000,step:100,target:10000,down:false,desc:'Track weekly movement and set a realistic daily step goal.',chart:'Last week step totals',breakTitle:'Today\'s step split',weekly:[7410,8285,6930,10120,11290,9640,12430],parts:[['Morning movement',2860,'A strong start built early momentum.'],['Afternoon activity',4180,'Break walks kept the line moving.'],['Evening push',5390,'One more short walk would stretch the lead.']],range:{min:0,max:12430},tips:[['Add a short evening loop','Ten to fifteen minutes after dinner can finish the job.'],['Break up long work blocks','Two minute walks help both movement and focus.']],chips:['Movement goal','Walking','Daily streak']},heart:{name:'Heart Rate',mark:'HR',accent:'#4d8d68',accent2:'#95c9a8',fade:'rgba(77,141,104,.14)',unit:'bpm',min:45,step:1,target:78,down:true,hasTarget:false,referenceLabel:'Calm-day ceiling',referenceText:'Heart rate reads better as a trend line, so this screen uses a reference ceiling instead of an editable target.',desc:'See today\'s average, max, min, and the full week trend.',chart:'7 day average heart rate',breakTitle:'Today\'s heart profile',weekly:[82,79,84,78,81,77,76],parts:[['Resting baseline',61,'A calm baseline suggests decent recovery.'],['Workout peak',132,'Peak effort came during your hardest block.'],['Recovery rate',72,'You settled quickly after effort.']],range:{min:58,max:132},tips:[['Protect cooldown time','A short breathing block can keep the daily average lower.'],['Watch intensity spikes','If peaks climb too often, use lighter intervals tomorrow.']],chips:['Average bpm','Recovery','Cardio trend']},calories:{name:'Calories',mark:'CL',accent:'#77a66a',accent2:'#bdd9a8',fade:'rgba(119,166,106,.14)',unit:'kcal',min:1200,step:50,target:2000,down:false,desc:'Track weekly calorie burn and active output.',chart:'Weekly calorie burn',breakTitle:'Today\'s calorie sources',weekly:[1740,1885,1690,2070,2180,1955,2210],parts:[['Baseline burn',1280,'Your body burned this before extra activity.'],['Movement burn',510,'Most of today\'s lift came from steady movement.'],['Workout boost',420,'Training added a strong final push.']],range:{min:0,max:2210},tips:[['Anchor activity after meals','Short movement sessions lift burn without huge fatigue.'],['Pair steps with training','Your best days mix steady movement with one strong session.']],chips:['Energy burn','Activity output','Consistency']},sleep:{name:'Sleep',mark:'SL',accent:'#4aa287',accent2:'#98d5c0',fade:'rgba(74,162,135,.14)',unit:'hours',min:4,step:.25,target:8,down:false,desc:'Compare last week\'s sleep against your nightly goal.',chart:'Weekly sleep duration',breakTitle:'Last night\'s sleep stages',weekly:[6.4,7.1,6.7,7.8,8.2,7.4,7.9],parts:[['Deep sleep',2.1,'Deep sleep was strong enough for recovery.'],['Core sleep',4.5,'Most of the night stayed stable.'],['REM sleep',1.3,'The dream cycle was healthy but could be longer.']],range:{min:0,max:8.2},tips:[['Tighten bedtime consistency','A fixed bedtime usually improves your whole week.'],['Protect the last hour','Lower stimulation often improves deep sleep share.']],chips:['Recovery','Night routine','Sleep debt']},spo2:{name:'SpO2',mark:'O2',accent:'#5f9f87',accent2:'#a7d0bf',fade:'rgba(95,159,135,.14)',unit:'%',min:90,step:1,target:98,down:false,hasTarget:false,referenceLabel:'Healthy floor',referenceText:'SpO2 is a health signal, not a goal to chase, so this screen shows a reference floor instead of a target editor.',desc:'Watch oxygen saturation stay steady across the week.',chart:'Weekly oxygen saturation',breakTitle:'Today\'s oxygen highlights',weekly:[97,98,97,96,98,99,98],parts:[['Night average',97,'Overnight readings stayed stable.'],['Workout dip',95,'A temporary dip during effort recovered quickly.'],['Recovery level',99,'Post effort oxygen returned to a strong range.']],range:{min:95,max:99},tips:[['Use steady nasal breathing','Breath quality and posture can help readings stabilize.'],['Check workout recovery','Strong rebounds after effort are what matter most.']],chips:['Oxygen','Breathing','Recovery quality']},stress:{name:'Stress',mark:'SR',accent:'#6f9f6f',accent2:'#bdd9b5',fade:'rgba(111,159,111,.14)',unit:'pts',min:10,step:1,target:35,down:true,hasTarget:false,referenceLabel:'Comfort ceiling',referenceText:'Stress is more useful as a ceiling and pattern to monitor, so this screen keeps it as a reference instead of a daily target.',desc:'Set an upper limit and track stress spikes through the week.',chart:'Weekly stress load',breakTitle:'Today\'s stress picture',weekly:[44,39,47,36,31,34,29],parts:[['Focus block load',28,'Most strain came during longer work sessions.'],['Peak stress burst',52,'The hardest moment was brief but noticeable.'],['Evening reset',24,'You came down well after the peak.']],range:{min:24,max:52},tips:[['Protect reset blocks','Recovery windows after intense focus keep totals down.'],['Notice peak timing','If spikes repeat at one hour, you can design around it.']],chips:['Calm load','Recovery habits','Mental balance']}};
+const state={active:'steps',prefs:loadPrefs(),chartIndex:6};
+
+function loadPrefs(){let p={};try{p=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}catch{}Object.entries(metrics).forEach(([k,m])=>{p[k]=p[k]||{};p[k].target=Number(p[k].target)||m.target;p[k].reminder=p[k].reminder||'08:00';p[k].mode=p[k].mode||'maintain'});return p}
+function savePrefs(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state.prefs))}
+function metric(id=state.active){return metrics[id]}
+function pref(id=state.active){return state.prefs[id]}
+function usesTarget(m){return m.hasTarget!==false}
+function goalValue(id=state.active){const m=metric(id);return usesTarget(m)?pref(id).target:m.target}
+function goalLabel(m){return usesTarget(m)?'Target':m.referenceLabel}
+function avg(arr){return arr.reduce((a,b)=>a+b,0)/arr.length}
+function fmt(m,v){if(m.unit==='hours'){const mins=Math.round(v*60);return `${Math.floor(mins/60)}h ${mins%60}m`}if(m.unit==='%')return `${Number(v).toLocaleString('en-US')}%`;return `${Number(v).toLocaleString('en-US',{maximumFractionDigits:Number.isInteger(v)?0:1})} ${m.unit}`}
+function diffFmt(m,v){const sign=v>0?'+':v<0?'-':'';const a=Math.abs(v);if(m.unit==='hours'){const mins=Math.round(a*60);return `${sign}${Math.floor(mins/60)}h ${mins%60}m`}if(m.unit==='%')return `${sign}${a}%`;return `${sign}${Number(a).toLocaleString('en-US',{maximumFractionDigits:Number.isInteger(a)?0:1})} ${m.unit}`}
+function progress(m,value,target){if(m.down){if(value<=target)return 100;return Math.max(0,100-((value-target)/target)*100)}return Math.min(100,(value/target)*100)}
+
+/* Status helpers: keep green theme but introduce warning/critical states */
+function severityClass(m,value,target){const p=progress(m,value,target);if(m.down){if(value<=target)return'good';if(p>=70)return'warning';return'critical'}if(value>=target)return'good';if(p>=70)return'warning';return'critical'}
+function status(m,value,target){const sev=severityClass(m,value,target);if(!usesTarget(m)){if(m.down){if(sev==='good')return['In range','good'];if(sev==='warning')return['Near ceiling','warning'];return['Above range','critical']}if(sev==='good')return['In range','good'];if(sev==='warning')return['Near floor','warning'];return['Below range','critical']}if(m.down){if(sev==='good')return['In range','good'];if(sev==='warning')return['Slightly high','warning'];return['Above limit','critical']}if(sev==='good')return['Goal hit','good'];if(sev==='warning')return['Close','warning'];return['Below goal','critical']}
+function trend(m){const d=m.weekly[6]-m.weekly[5],good=m.down?d<=0:d>=0,dir=d===0?'steady':d>0?'up':'down';return{dir,good,label:d===0?'Holding steady':`${good?'Moving well':'Needs attention'} ${diffFmt(m,d)}`}}
+function setTheme(m){document.documentElement.style.setProperty('--accent',m.accent);document.documentElement.style.setProperty('--accent2',m.accent2);document.documentElement.style.setProperty('--fade',m.fade)}
+function weeklyGoalHits(m,target=goalValue()){return m.weekly.filter(v=>severityClass(m,v,target)==='good').length}
+function streakDays(m,target=goalValue()){let streak=0;for(let i=m.weekly.length-1;i>=0;i-=1){if(severityClass(m,m.weekly[i],target)==='good')streak+=1;else break}return streak}
+function clampPct(value){return Math.max(6,Math.min(100,Math.round(value)))}
+function roundMetricValue(m,value,digits=m.unit==='hours'?1:0){return Number(value.toFixed(digits))}
+function setText(id,value){$(id).textContent=value}
+function setWidth(id,value){$(id).style.width=`${value}%`}
+function createMetricSummary(id=state.active){const m=metric(id),target=goalValue(id),current=m.weekly[m.weekly.length-1],average=avg(m.weekly),trendInfo=trend(m),statusInfo=status(m,current,target),severity=severityClass(m,current,target),hits=weeklyGoalHits(m,target),streak=streakDays(m,target);return{id,m,target,current,average,averageRounded:roundMetricValue(m,average),averagePrecise:Number(average.toFixed(1)),trendInfo,statusInfo,severity,hits,streak}}
+const BREAKDOWN_COPY={steps:'These blocks explain where your movement came from today.',heart:'These readings show where heart rate rose and settled across the day.',calories:'These sources show what contributed most to today\'s energy burn.',sleep:'These stages show how your recovery was distributed overnight.',spo2:'These moments show where oxygen dipped and recovered through the day.',stress:'These moments show where strain built up and where it eased off.'};
+const CONTEXT_COPY={steps:{weeklyTitle:'Movement snapshot',bestIcon:'🏆',bestLabel:'Best day',lowestIcon:'⚠️',lowestLabel:'Lowest day',averageLabel:'Weekly average',trendIcon:'📈',trendLabel:'Movement trend',gapTitle:'Goal gap',targetCompareLabel:'Average vs target',gapLabel:'Difference',comparisonTitle:'Weekly comparison',thisWeekLabel:'This week average',lastWeekLabel:'Last week average',diffLabel:'Difference',gapAhead:`You're ahead of your goal. Keep this pace to maintain your streak.`,gapClose:`You're close to your goal. A short evening walk should close the remaining gap.`,gapBehind:`You're behind your goal pace. Add two 15-minute walks daily to close the weekly gap.`,comparisonUp:'You improved compared to last week.',comparisonDown:'You slipped compared to last week. A few extra movement breaks can recover the difference.'},heart:{weeklyTitle:'Heart profile',bestIcon:'🫀',bestLabel:'Calmest day',lowestIcon:'⚠️',lowestLabel:'Peak day',averageLabel:'Weekly average',trendIcon:'📈',trendLabel:'Bpm trend',gapTitle:'Calm ceiling',targetCompareLabel:'Average vs ceiling',gapLabel:'Range gap',comparisonTitle:'Recovery comparison',thisWeekLabel:'This week average',lastWeekLabel:'Last week average',diffLabel:'Difference',gapAhead:'Your average is inside the calm-day range. Keep recovery blocks consistent.',gapClose:'Heart rate is close to your comfort ceiling. Use a longer cooldown today.',gapBehind:'Your average is above the calm-day ceiling. Choose a lighter session and give yourself more recovery.',comparisonUp:'Your recovery trend is better than last week.',comparisonDown:'Your recovery trend is slightly higher than last week. Reduce intensity for a day if needed.'},calories:{weeklyTitle:'Output snapshot',bestIcon:'🏆',bestLabel:'Best day',lowestIcon:'⚠️',lowestLabel:'Lightest day',averageLabel:'Weekly average',trendIcon:'📈',trendLabel:'Burn trend',gapTitle:'Output gap',targetCompareLabel:'Average vs target',gapLabel:'Difference',comparisonTitle:'Weekly comparison',thisWeekLabel:'This week average',lastWeekLabel:'Last week average',diffLabel:'Difference',gapAhead:'You are burning above your target pace. Keep activity balanced so recovery stays easy.',gapClose:'You are near your target pace. One more walk after meals should keep you on track.',gapBehind:'You are below your target pace. Add a brisk walk or short training block to lift the average.',comparisonUp:'You improved compared to last week.',comparisonDown:'This week is lighter than last week. A small extra push can close the gap.'},sleep:{weeklyTitle:'Recovery timeline',bestIcon:'🌙',bestLabel:'Best night',lowestIcon:'⚠️',lowestLabel:'Shortest night',averageLabel:'Weekly average',trendIcon:'📈',trendLabel:'Recovery trend',gapTitle:'Sleep gap',targetCompareLabel:'Average vs goal',gapLabel:'Difference',comparisonTitle:'Sleep comparison',thisWeekLabel:'This week average',lastWeekLabel:'Last week average',diffLabel:'Difference',gapAhead:'You are ahead of your sleep goal. Keep your bedtime consistent to maintain recovery.',gapClose:'You are close to your sleep goal. Going to bed a little earlier tonight can close the gap.',gapBehind:'You are below your sleep goal. Protect the last hour of the evening and aim for an earlier lights-out.',comparisonUp:'You slept better than last week.',comparisonDown:'Sleep is a bit lower than last week. A calmer night routine can help reset it.'},spo2:{weeklyTitle:'Oxygen snapshot',bestIcon:'🫁',bestLabel:'Best reading',lowestIcon:'⚠️',lowestLabel:'Lowest reading',averageLabel:'Weekly average',trendIcon:'📈',trendLabel:'Oxygen trend',gapTitle:'Range gap',targetCompareLabel:'Average vs floor',gapLabel:'Difference',comparisonTitle:'Oxygen comparison',thisWeekLabel:'This week average',lastWeekLabel:'Last week average',diffLabel:'Difference',gapAhead:'Readings are sitting above the healthy floor. Keep breathing and posture steady.',gapClose:'Readings are near the healthy floor. Ease effort and recheck after recovery.',gapBehind:'Readings are under the healthy floor. Use this as a cue to slow down and recover.',comparisonUp:'Oxygen readings are stronger than last week.',comparisonDown:'Oxygen readings are slightly lower than last week. Prioritize calm recovery today.'},stress:{weeklyTitle:'Spike analysis',bestIcon:'🧘',bestLabel:'Calmest day',lowestIcon:'⚠️',lowestLabel:'Highest strain day',averageLabel:'Weekly average',trendIcon:'📈',trendLabel:'Stress trend',gapTitle:'Comfort gap',targetCompareLabel:'Average vs ceiling',gapLabel:'Difference',comparisonTitle:'Stress comparison',thisWeekLabel:'This week average',lastWeekLabel:'Last week average',diffLabel:'Difference',gapAhead:'Stress is inside your comfort range. Protect your reset windows to keep it there.',gapClose:'Stress is close to your comfort ceiling. Take a short break before the next focus block.',gapBehind:'Stress is above your comfort ceiling. Step away for five minutes and lower the next task load.',comparisonUp:'Stress is lower than last week, which is a good sign.',comparisonDown:'Stress is running higher than last week. Add more reset time between demanding blocks.'}};
+function contextCopy(id=state.active){return CONTEXT_COPY[id]||CONTEXT_COPY.steps}
+function derivedPreviousAverage(m,currentAverage){const early=avg(m.weekly.slice(0,3));const late=avg(m.weekly.slice(-3));const swing=late-early;const raw=currentAverage-swing;const floor=m.unit==='%'?Math.max(90,m.range?.min??90):m.min;const ceiling=m.range?.max??Math.max(...m.weekly);const bounded=Math.max(floor,Math.min(ceiling,raw));return Number(bounded.toFixed(m.unit==='hours'?1:0))}
+function metricExtremes(m){if(m.down){const bestValue=Math.min(...m.weekly),lowestValue=Math.max(...m.weekly);return{bestValue,lowestValue,bestIndex:m.weekly.indexOf(bestValue),lowestIndex:m.weekly.indexOf(lowestValue)}}const bestValue=Math.max(...m.weekly),lowestValue=Math.min(...m.weekly);return{bestValue,lowestValue,bestIndex:m.weekly.indexOf(bestValue),lowestIndex:m.weekly.indexOf(lowestValue)}}
+function metricTrendLabel(m){const tr=trend(m);if(tr.dir==='steady')return'Holding steady';if(m.down)return tr.dir==='down'?'Settling down':'Rising';return tr.dir==='up'?'Building up':'Cooling off'}
+function formatPercentDiff(m,current,previous){if(!previous)return{label:'0%',improved:false,pct:0};const raw=((current-previous)/previous)*100;const improved=m.down?raw<0:raw>0;const pct=Math.round(Math.abs(raw));return{label:`${raw>=0?'+':'-'}${pct}%`,improved,pct}}
+
+/* Smooth chart path for a more modern graph without changing the data source */
+function buildSmoothPath(points){if(points.length<2)return'';let d=`M ${points[0].x} ${points[0].y}`;for(let i=0;i<points.length-1;i+=1){const p0=points[i-1]||points[i];const p1=points[i];const p2=points[i+1];const p3=points[i+2]||p2;const cp1x=p1.x+(p2.x-p0.x)/6;const cp1y=p1.y+(p2.y-p0.y)/6;const cp2x=p2.x-(p3.x-p1.x)/6;const cp2y=p2.y-(p3.y-p1.y)/6;d+=` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`}return d}
+
+function syncChartActive(m,points,index){const safeIndex=Math.max(0,Math.min(points.length-1,index));state.chartIndex=safeIndex;const point=points[safeIndex];const tooltip=$('chartTooltip');if(tooltip){tooltip.style.left=`${point.x}px`;tooltip.style.top=`${point.y}px`;tooltip.innerHTML=`<strong>${fmt(m,point.v)}</strong><span>${week[safeIndex].long}</span>`;tooltip.classList.remove('is-edge-right','is-edge-left');if(safeIndex>=points.length-2)tooltip.classList.add('is-edge-right');else if(safeIndex<=0)tooltip.classList.add('is-edge-left');tooltip.classList.add('visible')}$('chartToday').textContent=`${week[safeIndex].short}: ${fmt(m,point.v)}`;document.querySelectorAll('.chart-dot').forEach((dot,i)=>{dot.classList.toggle('is-active',i===safeIndex);dot.classList.toggle('is-dimmed',i!==safeIndex)});document.querySelectorAll('.chart-label').forEach((label,i)=>label.classList.toggle('is-active',i===safeIndex))}
+
+function bindChartInteractions(m,points){let frame=0,pendingIndex=points.length-1;const schedule=(index)=>{pendingIndex=index;if(frame)return;frame=requestAnimationFrame(()=>{frame=0;syncChartActive(m,points,pendingIndex)})},reset=()=>schedule(points.length-1);document.querySelectorAll('.chart-hit').forEach((hit)=>{hit.addEventListener('mouseenter',()=>schedule(Number(hit.dataset.index)));hit.addEventListener('focus',()=>schedule(Number(hit.dataset.index)))});document.querySelectorAll('.chart-label').forEach((label)=>{label.addEventListener('mouseenter',()=>schedule(Number(label.dataset.index)))});$('chart').addEventListener('mouseleave',reset);reset()}
+
+/* Card rendering: larger primary numbers plus lightweight progress bars */
+function renderCards(){const html=Object.entries(metrics).map(([k,m])=>{const value=m.weekly[6],t=goalValue(k),tr=trend(m),s=status(m,value,t),severity=severityClass(m,value,t),pc=clampPct(progress(m,value,t)),goalCopy=usesTarget(m)?`Target ${fmt(m,t)}`:`${m.referenceLabel} ${fmt(m,t)}`;return `<button class="metric-card ${state.active===k?'active':''}" onclick="setActive('${k}')" style="--accent:${m.accent};--accent2:${m.accent2};--fade:${m.fade}"><div class="metric-top"><div class="mark">${m.mark}</div><div class="chip ${severity}">${tr.dir==='steady'?'Steady':tr.dir==='up'?'Trending up':'Trending down'}</div></div><div class="metric-name">${m.name}</div><div class="metric-value">${fmt(m,value)}</div><div class="metric-progress"><div class="metric-progress-fill ${severity}" style="width:${pc}%"></div></div><div class="metric-subtext">${goalCopy}<br><span class="status ${s[1]}" style="margin-top:8px">${s[0]}</span></div></button>`}).join('');$('cards').innerHTML=html}
+
+function renderTabs(){const m=metric();$('tabs').innerHTML=Object.entries(metrics).map(([k,v])=>`<button class="${k===state.active?'active':''}" onclick="setActive('${k}')" style="--accent:${v.accent};--fade:${v.fade}">${v.name}</button>`).join('')}
+
+function renderStats(m){const now=m.weekly[6],wa=avg(m.weekly),best=m.down?Math.min(...m.weekly):Math.max(...m.weekly),t=goalValue();const arr=m.name==='Heart Rate'?[['Average today',fmt(m,now),'Daily average across the current window.'],['Maximum today',fmt(m,m.range.max),'Highest reading reached today.'],['Minimum today',fmt(m,m.range.min),'Lowest point during recovery.'],['Weekly average',fmt(m,Number(wa.toFixed(1))),trend(m).label]]:[['Today',fmt(m,now),'Current total or average for the selected metric.'],[goalLabel(m),fmt(m,t),usesTarget(m)?'Saved locally on this device.':'Used as a fixed reference band for this metric.'],[m.down?'Best low':'Best day',fmt(m,best),'Strongest point from the last seven days.'],['Weekly average',fmt(m,Number(wa.toFixed(1))),trend(m).label]];$('stats').innerHTML=arr.map(s=>`<div class="stat"><span>${s[0]}</span><strong>${s[1]}</strong><div class="muted">${s[2]}</div></div>`).join('')}
+
+function renderChart(m){const values=m.weekly,w=860,h=300,p={t:22,r:20,b:34,l:18},uw=w-p.l-p.r,uh=h-p.t-p.b,max=Math.max(...values),min=Math.min(...values),range=Math.max(1,max-min),points=values.map((n,i)=>({x:p.l+(uw/6)*i,y:p.t+((max-n)/range)*uh,v:n})),line=buildSmoothPath(points),fill=`${line} L ${points[points.length-1].x} ${h-p.b} L ${points[0].x} ${h-p.b} Z`,grid=Array.from({length:4},(_,i)=>{const y=p.t+(uh/3)*i;return `<line x1="${p.l}" y1="${y}" x2="${w-p.r}" y2="${y}" stroke="rgba(148,163,184,.24)" stroke-dasharray="5 6"></line>`}).join(''),fillId=`chart-fill-${state.active}`,strokeId=`chart-stroke-${state.active}`,dots=points.map((pt,i)=>`<circle class="chart-dot" data-index="${i}" cx="${pt.x}" cy="${pt.y}" r="6" fill="${m.accent}" stroke="white" stroke-width="3"></circle>`).join(''),hits=points.map((pt,i)=>`<circle class="chart-hit" data-index="${i}" cx="${pt.x}" cy="${pt.y}" r="16" fill="transparent" tabindex="0" aria-label="${week[i].long}: ${fmt(m,pt.v)}"></circle>`).join('');$('chart').innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${m.accent}" stop-opacity=".28"></stop><stop offset="100%" stop-color="${m.accent}" stop-opacity=".03"></stop></linearGradient><linearGradient id="${strokeId}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${m.accent2}"></stop><stop offset="100%" stop-color="${m.accent}"></stop></linearGradient></defs>${grid}<path d="${fill}" fill="url(#${fillId})"></path><path d="${line}" fill="none" stroke="url(#${strokeId})" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></path>${dots}${hits}</svg><div class="chart-tooltip" id="chartTooltip"></div>`;$('labels').innerHTML=values.map((n,i)=>`<div class="chart-label" data-index="${i}"><strong>${week[i].short}</strong><span class="muted">${fmt(m,n)}</span></div>`).join('');bindChartInteractions(m,points)}
+
+function renderSettings(m,summary){const panel=$('settingsPanel');if(!usesTarget(m)){panel.hidden=true;return}panel.hidden=false;const p=pref(),{current,target,severity}=summary,pc=clampPct(progress(m,current,p.target)),delta=m.down?current-p.target:p.target-current;$('settingsTitle').textContent=`${m.name} action plan`;$('settingsText').textContent=m.name==='Sleep'?'Tune your nightly routine, reminder, and goal to support recovery.':m.name==='Calories'?'Adjust your output target and reminder so the plan stays realistic.':'Set your target, reminder, and mode for this metric.';$('targetLabel').textContent=`${m.name} target`;$('targetInput').min=m.min;$('targetInput').step=m.step;$('targetInput').value=p.target;$('reminder').value=p.reminder;$('mode').value=p.mode;$('progressTitle').textContent=`${m.name} progress`;$('progressPct').textContent=`${pc}%`;$('progressFill').className=`fill ${severity}`;$('progressFill').style.width=`${pc}%`;$('progressText').innerHTML=m.down?(current<=target?`You are ${diffFmt(m,target-current)} under your limit today.`:`You are ${diffFmt(m,delta)} above your limit today.`):(current>=target?`You are ${diffFmt(m,current-target)} above your goal today.`:`You need ${diffFmt(m,delta)} more to hit today&apos;s target.`)}
+
+function renderBreakdown(m){$('breakdownTitle').textContent=m.breakTitle.replace(/&apos;/g,"'");$('breakdownText').textContent=BREAKDOWN_COPY[state.active]||'These blocks explain what shaped today\'s result.';$('breakdown').innerHTML=m.parts.map(p=>`<div class="item"><strong>${p[0]}: ${fmt(m,p[1])}</strong><div class="muted">${p[2]}</div></div>`).join('')}
+
+function renderHistory(m){const t=goalValue();$('historyTitle').textContent=`${m.name} history`;$('historyText').textContent=`A full view of your ${m.name.toLowerCase()} records across the last seven days.`;$('historyGoalHead').textContent=goalLabel(m);$('rangeTag').textContent=`${week[0].long} to ${week[6].long}`;$('historyBody').innerHTML=m.weekly.map((n,i)=>{const s=status(m,n,t);const note=usesTarget(m)?(m.down?(n<=t?'Stayed inside the preferred range.':'Above the planned upper limit.'):(n>=t?'Target cleared for the day.':'Just shy of the current target.')):(m.down?(n<=t?'Stayed inside the reference range.':'Ran above the reference ceiling.'):(n>=t?'Stayed above the reference floor.':'Dipped under the reference floor.'));return `<tr><td>${week[i].short}, ${week[i].long}</td><td>${fmt(m,n)}</td><td>${fmt(m,t)}</td><td><span class="status ${s[1]}">${s[0]}</span></td><td>${note}</td></tr>`}).join('')}
+
+function renderTips(m,summary){const p=pref(),{current,target,statusInfo}=summary,[statusLabel,statusClass]=statusInfo,intro=usesTarget(m)?(m.down?[current<=target?'You are inside your preferred band':'Bring the load down gently',current<=target?`Keep the ${p.mode} plan and protect your ${p.reminder} reminder block.`:`Your saved target is ${fmt(m,target)}, so use the next few hours to settle this metric.`]:[current>=target?'Target already cleared today':'A small push will finish the job',current>=target?`You are above your saved target of ${fmt(m,target)}. Focus on maintaining the streak.`:`A few focused actions before ${p.reminder} can still close the gap.`]):[statusLabel,m.referenceText];$('tipsTitle').textContent=`${m.name} guidance`;$('tipsText').textContent=usesTarget(m)?`Focused actions based on your saved target, weekly pattern, and current status.`:`Focused actions based on the weekly ${m.name.toLowerCase()} trend and your current range.`;$('statusTag').textContent=statusLabel;$('statusTag').className=`tag ${statusClass}`;$('tips').innerHTML=[[intro[0],intro[1]],...m.tips].map(tip=>`<div class="item tip"><strong>${tip[0]}</strong><div class="muted">${tip[1]}</div></div>`).join('');$('chips').innerHTML=(usesTarget(m)?[`${p.mode.replace(/^\w/,c=>c.toUpperCase())} mode`,`Reminder ${p.reminder}`,statusLabel,...m.chips]:[goalLabel(m),fmt(m,target),statusLabel,...m.chips]).map(c=>`<span>${c}</span>`).join('')}
+
+/* Context-aware summary cards: use the active metric instead of reusing steps data everywhere */
+function renderStepInsights(summary){
+const {m,target,average,current}=summary,copy=contextCopy(),{bestValue,lowestValue,bestIndex,lowestIndex}=metricExtremes(m),trendLabel=metricTrendLabel(m),currentRounded=summary.averageRounded,gapValue=roundMetricValue(m,average-target),gapAbs=Math.abs(gapValue),previousAverage=derivedPreviousAverage(m,average),comparison=formatPercentDiff(m,average,previousAverage),inPreferredRange=m.down?average<=target:average>=target,maxComparison=Math.max(currentRounded,previousAverage,1),currentWidth=Math.max(18,Math.round((currentRounded/maxComparison)*100)),previousWidth=Math.max(18,Math.round((previousAverage/maxComparison)*100));
+[['contextWeeklyTitle',copy.weeklyTitle],['contextBestIcon',copy.bestIcon],['contextBestLabel',copy.bestLabel],['contextLowestIcon',copy.lowestIcon],['contextLowestLabel',copy.lowestLabel],['contextAverageLabel',copy.averageLabel],['contextTrendIcon',copy.trendIcon],['contextTrendLabel',copy.trendLabel],['contextGapTitle',copy.gapTitle],['contextTargetCompareLabel',copy.targetCompareLabel],['contextGapLabel',copy.gapLabel],['contextComparisonTitle',copy.comparisonTitle],['contextThisWeekLabel',copy.thisWeekLabel],['contextLastWeekLabel',copy.lastWeekLabel],['contextDiffLabel',copy.diffLabel],['stepBestDay',`${week[bestIndex].short}, ${fmt(m,bestValue)}`],['stepLowestDay',`${week[lowestIndex].short}, ${fmt(m,lowestValue)}`],['stepWeeklyAverage',fmt(m,currentRounded)],['stepTrend',trendLabel],['stepTargetCompare',`${fmt(m,currentRounded)} vs ${fmt(m,target)}`],['stepTargetGap',diffFmt(m,gapValue)],['stepGapSuggestion',inPreferredRange?copy.gapAhead:(gapAbs<Math.max(1,target*0.15)?copy.gapClose:copy.gapBehind)],['stepThisWeekAverage',fmt(m,currentRounded)],['stepLastWeekAverage',fmt(m,previousAverage)],['stepPercentDiff',comparison.label],['comparisonCurrentLabel',copy.thisWeekLabel],['comparisonPreviousLabel',copy.lastWeekLabel],['comparisonCurrentValue',fmt(m,currentRounded)],['comparisonPreviousValue',fmt(m,previousAverage)],['comparisonBadge',comparison.label],['stepComparisonNote',comparison.pct===0?'You are tracking almost exactly in line with last week.':`${comparison.improved?copy.comparisonUp:copy.comparisonDown} (${comparison.pct}% change)`]].forEach(([id,value])=>setText(id,value));
+$('comparisonBadge').classList.toggle('is-down',!comparison.improved&&comparison.pct!==0);
+setWidth('comparisonCurrentFill',currentWidth);
+setWidth('comparisonPreviousFill',previousWidth)
+}
+
+/* Simple insight rules: actionable suggestions based on existing numbers only */
+function buildInsights(m){const value=m.weekly[6],target=goalValue(),hits=weeklyGoalHits(m),gap=Math.abs(value-target),items=[];if(m.name==='Steps'){items.push(value<target?['Step gap',`You are ${Number(target-value).toLocaleString('en-US')} steps short of your goal. A 15-minute walk between classes can help shrink the gap.`]:['Goal locked in',`You are above your step target today. A short recovery walk is enough to protect the streak.`])}else if(m.name==='Sleep'){items.push(value<7?['Sleep recovery',`You slept less than 7 hours. Try a calmer evening routine and aim to get to bed earlier tonight.`]:['Sleep rhythm',`Your sleep is close to your ideal range. Protect the last hour before bed to keep it steady.`])}else if(m.name==='SpO2'){items.push(value<target?['Breathing check',`SpO2 is under the healthy floor today. Ease intensity, sit upright, and recheck after a calm recovery block.`]:['Oxygen stable',`SpO2 is sitting in a healthy band. Keep breathing steady during work and exercise blocks.`])}else if(m.name==='Stress'){items.push(value>target?['Stress reset',`Stress is above your comfort ceiling. A 5-minute break away from the screen can help bring it down.`]:['Stress control',`Stress is staying inside your comfort range. Protect small recovery breaks while studying.`])}else if(m.name==='Heart Rate'){items.push(value>target?['Recovery watch',`Your average heart rate is slightly above your calm-day ceiling. Keep the next workout light and extend your cooldown.`]:['Recovery trend',`Heart rate is trending calmly today. Light movement and hydration should keep recovery smooth.`])}else if(m.name==='Calories'){items.push(value<target?['Movement boost',`You are ${fmt(m,gap)} short of today&apos;s burn target. A brisk walk after meals can help close part of the gap.`]:['Output complete',`You have already cleared today&apos;s calorie target. Keep the rest of the day light and consistent.`])}items.push(hits>=5?['Weekly consistency',`You were in range on ${hits} of the last 7 days. That routine is becoming a reliable habit.`]:['Weekly focus',`You were on target for ${hits} of the last 7 days. One strong day at a time will pull the weekly line up.`]);const tr=trend(m);items.push(tr.dir==='steady'?['Trend check','This metric is holding steady. Small, repeatable habits are the best next move.']:[tr.good?'Trend support':'Trend watch',tr.good?`The weekly trend is moving in the right direction with ${diffFmt(m,m.weekly[6]-m.weekly[5])}. Keep the routine consistent.`:`The weekly trend shifted by ${diffFmt(m,m.weekly[6]-m.weekly[5])}. A small correction today can stop that slide.`]);return items.slice(0,3)}
+
+function renderInsights(m,summary){const {hits,streak}=summary,pct=Math.round((hits/7)*100),weeklyClass=pct>=72?'good':pct>=45?'warning':'critical';$('streakCount').textContent=`${streak} day${streak===1?'':'s'}`;$('weeklyGoalText').textContent=`${hits}/7 days`;$('weeklyGoalPct').textContent=`${pct}%`;$('weeklyGoalFill').className=`weekly-fill ${weeklyClass}`;$('weeklyGoalFill').style.width=`${Math.max(8,pct)}%`;$('insightsTitle').textContent=`${m.name} smart suggestions`;$('insightsText').textContent=usesTarget(m)?'Actionable guidance based on your goal, current progress, and weekly pattern.':'Actionable guidance based on your current reading, preferred range, and weekly pattern.';$('insights').innerHTML=buildInsights(m).map(([title,copy])=>`<div class="item"><strong>${title}</strong><div class="muted">${copy}</div></div>`).join('')}
+
+function renderHero(m,summary){const count=Object.entries(metrics).filter(([k])=>createMetricSummary(k).severity==='good').length;const score=Math.min(99,Math.round((count/Object.keys(metrics).length)*100+24)),{streak,hits,averagePrecise,target}=summary;$('heroScore').textContent=score;$('heroScoreText').textContent=`${count} of 6 metrics are currently in a strong zone today.`;$('heroStreak').textContent=`${streak} day streak`;$('heroStreakText').textContent=`${hits} of the last 7 ${m.name.toLowerCase()} readings were in range or on goal.`;$('heroMetric').textContent=m.name;$('heroMetricText').textContent=usesTarget(m)?`You are viewing ${m.chart.toLowerCase()} with editable daily planning controls.`:`You are viewing ${m.chart.toLowerCase()} with reference-based guidance instead of a target editor.`;$('heroSecondaryBtn').textContent=usesTarget(m)?'Edit target':'View breakdown';$('coachText').textContent=usesTarget(m)?(m.down?`Your weekly average is ${fmt(m,averagePrecise)}. Keep today calm to stay inside the target band.`:`Your weekly average is ${fmt(m,averagePrecise)}. A small extra push can improve the weekly line.`):(m.down?`Your weekly average is ${fmt(m,averagePrecise)}. Staying under ${fmt(m,target)} keeps this metric in a calmer zone.`:`Your weekly average is ${fmt(m,averagePrecise)}. Holding above ${fmt(m,target)} keeps this signal in a healthier range.`)}
+
+function render(){const summary=createMetricSummary(),{m}=summary;setTheme(m);$('eyebrow').textContent=`${m.name} dashboard`;$('title').textContent=m.name;$('desc').textContent=m.desc;$('trendTag').textContent=summary.trendInfo.label;$('chartTitle').textContent=m.chart;$('chartSub').textContent=`Weekly average: ${fmt(m,summary.averagePrecise)}`;renderCards();renderTabs();renderStats(m);renderChart(m);renderStepInsights(summary);renderSettings(m,summary);renderBreakdown(m);renderHistory(m);renderTips(m,summary);renderInsights(m,summary);renderHero(m,summary)}
+function setActive(id){state.active=id;state.chartIndex=metric(id).weekly.length-1;render()}function saveCurrent(){const m=metric();if(!usesTarget(m))return;const n=Number($('targetInput').value);if(!Number.isFinite(n)||n<m.min){$('saveNote').textContent=`Enter a valid ${m.name.toLowerCase()} target above ${m.min}.`;return}state.prefs[state.active]={target:n,reminder:$('reminder').value,mode:$('mode').value};savePrefs();$('saveNote').textContent=`${m.name} target saved locally for this desktop app.`;render()}function scrollToHistory(){$('historySection').scrollIntoView({behavior:'smooth',block:'start'})}function focusTarget(){if(usesTarget(metric())){$('targetInput').focus();$('targetInput').select();return}document.getElementById('breakdownTitle').scrollIntoView({behavior:'smooth',block:'start'})}function showComingSoon(message){alert(message)}function minimizeWindow(){ipcRenderer.send('window-minimize')}function maximizeWindow(){ipcRenderer.send('window-maximize')}function closeWindow(){ipcRenderer.send('window-close')}
+window.setActive=setActive;window.scrollToHistory=scrollToHistory;window.focusTarget=focusTarget;window.showComingSoon=showComingSoon;window.minimizeWindow=minimizeWindow;window.maximizeWindow=maximizeWindow;window.closeWindow=closeWindow;$('saveBtn').addEventListener('click',saveCurrent);$('targetInput').addEventListener('keydown',e=>{if(e.key==='Enter')saveCurrent()});render();
+</script>
+</body>
+</html>

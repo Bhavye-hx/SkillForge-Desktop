@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillForge | Python Theory & Practice</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Python Runtime -->
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+
+    <!-- PrismJS for Syntax Highlighting (Theory Sections) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CORE THEME */
+        body { 
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,0.05) 0, transparent 50%), 
+                radial-gradient(at 50% 100%, hsla(225,39%,30%,0.05) 0, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .glass-sidebar {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(24px);
+            border-right: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Editor Styling */
+        .editor-container {
+            background: #0f172a; /* Slate 900 */
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Transition Classes */
+        .sidebar-expanded { width: 20rem; opacity: 1; visibility: visible; }
+        .sidebar-collapsed { width: 0; opacity: 0; visibility: hidden; padding: 0 !important; border: none; }
+        
+        .interpreter-open { flex: 1; width: 45%; opacity: 1; margin-left: 1.5rem; visibility: visible; transform: translateX(0); }
+        .interpreter-closed { width: 0; opacity: 0; margin-left: 0; visibility: hidden; transform: translateX(20px); padding: 0 !important; flex: 0; }
+
+        /* Prose Overrides */
+        .prose h2 { font-weight: 800; color: #1e293b; letter-spacing: -0.025em; margin-bottom: 0.75rem; }
+        .prose h3 { font-weight: 700; color: #334155; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .prose p { color: #475569; line-height: 1.75; margin-bottom: 1rem; }
+        .prose code { color: #4f46e5; padding: 0.15rem 0.4rem; border-radius: 0.375rem; font-weight: 600; font-size: 0.875em; }
+        
+        pre[class*="language-"] { 
+            border-radius: 1rem !important; 
+            margin: 1.5rem 0 !important;
+            font-size: 0.9rem !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            background: #1e293b !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden text-slate-600">
+
+    <!-- Ambient Background Blobs -->
+    <div class="fixed top-[-100px] left-[-100px] w-[500px] h-[500px] bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 pointer-events-none animate-float"></div>
+    <div class="fixed bottom-[-100px] right-[-100px] w-[500px] h-[500px] bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 pointer-events-none animate-float" style="animation-delay: 2s"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar-expanded h-full glass-sidebar flex flex-col z-30 transition-all duration-500 ease-in-out relative overflow-hidden whitespace-nowrap" id="sidebar">
+        <!-- Header -->
+        <div class="p-6 border-b border-slate-100/50 flex flex-col gap-6">
+            <button onclick="window.location.href='pythonhub.html'" class="w-fit flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-brand-600 transition-colors group">
+                <div class="p-1 rounded bg-slate-100 group-hover:bg-brand-50 transition-colors">
+                    <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                </div>
+                BACK TO HUB
+            </button>
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight">Python <span class="text-brand-600">Theory</span></h1>
+                <p class="text-sm text-slate-500 mt-1 font-medium">Interactive Learning Path</p>
+            </div>
+        </div>
+
+        <!-- Navigation List -->
+        <nav class="flex-1 overflow-y-auto p-4 space-y-2" id="moduleList">
+            <!-- Items injected via JS -->
+        </nav>
+
+        <!-- Progress Footer -->
+        <div class="p-6 bg-white/40 border-t border-slate-100/50 backdrop-blur-sm">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Course Progress</span>
+                <span id="progressPercent" class="text-xs font-bold text-brand-600">0%</span>
+            </div>
+            <div class="w-full h-2 bg-slate-200/50 rounded-full overflow-hidden">
+                <div id="progressBar" class="h-full bg-gradient-to-r from-brand-500 to-brand-700 rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(79,70,229,0.3)]" style="width: 0%"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative z-10 transition-all duration-500">
+        
+        <!-- Header / Toolbar -->
+        <header class="h-16 shrink-0 flex items-center justify-between px-6 md:px-8 border-b border-white/20">
+            <div class="flex items-center gap-4">
+                <!-- Sidebar Toggle -->
+                <button id="sidebarToggle" onclick="toggleSidebar()" class="p-2 rounded-lg text-slate-500 hover:bg-white/50 hover:text-brand-600 transition-all focus:outline-none focus:ring-2 focus:ring-brand-500/20" title="Toggle Sidebar">
+                    <i data-lucide="panel-left" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-4 ml-auto">
+                <!-- Interpreter Toggle -->
+                <button id="editorToggle" onclick="toggleInterpreter()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-slate-700 transition-all shadow-lg shadow-slate-200" title="Toggle Code Editor">
+                    <i data-lucide="code-2" class="w-4 h-4"></i>
+                    <span id="editorToggleText">Hide Editor</span>
+                </button>
+
+                <!-- Environment Status -->
+                <div id="py-status" class="glass-panel px-4 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold text-amber-600">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    </span>
+                    Booting Python...
+                </div>
+            </div>
+        </header>
+
+        <!-- Split View Container -->
+        <div class="flex-1 overflow-hidden p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row">
+            
+            <!-- LEFT: Theory Content (Scrollable) -->
+            <div class="flex-1 overflow-y-auto pr-2 custom-scroll pb-20 lg:pb-0 transition-all duration-500" id="scrollContainer">
+                <div id="contentArea" class="prose max-w-none animate-slide-up">
+                    <!-- Content Injected Here -->
+                </div>
+                
+                <!-- Navigation Actions -->
+                <div class="flex items-center justify-between mt-12 pt-8 border-t border-slate-200/60">
+                    <button id="prevBtn" onclick="changeModule(-1)" class="group flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-slate-400 hover:text-slate-600 hover:bg-white/50 transition-all disabled:opacity-30">
+                        <i data-lucide="arrow-left" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i> Previous
+                    </button>
+                    <button id="nextBtn" onclick="changeModule(1)" class="group flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 hover:bg-brand-600 hover:shadow-brand-500/30 hover:-translate-y-0.5 transition-all">
+                        Next Module <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT: Editor (Collapsible) -->
+            <div id="interpreterPanel" class="interpreter-open lg:h-full animate-slide-up transition-all duration-500 ease-in-out origin-right" style="animation-delay: 0.1s">
+                <div class="editor-container flex flex-col h-full overflow-hidden relative">
+                    <!-- Editor Header -->
+                    <div class="flex items-center justify-between px-4 py-3 bg-[#1e293b] border-b border-slate-700/50 shrink-0">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="terminal" class="w-4 h-4 text-brand-400"></i>
+                            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Live Interpreter</span>
+                        </div>
+                        <button onclick="runPython()" id="runBtn" class="flex items-center gap-2 px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-lg transition-all active:scale-95 shadow-lg shadow-brand-900/50">
+                            <i data-lucide="play" class="w-3 h-3 fill-current"></i> RUN
+                        </button>
+                    </div>
+
+                    <!-- Input Area (Reverted to clean Textarea) -->
+                    <div class="flex-1 relative group bg-[#0f172a]">
+                        <textarea id="code-input" class="w-full h-full bg-transparent text-emerald-400 font-mono text-sm p-4 resize-none focus:outline-none leading-relaxed" spellcheck="false"># Loading starter code...</textarea>
+                    </div>
+
+                    <!-- Output Terminal -->
+                    <div class="h-1/3 min-h-[140px] bg-[#020617] border-t border-slate-800 flex flex-col shrink-0">
+                        <div class="flex items-center justify-between px-4 py-2 bg-[#0f172a]">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">Output Console</span>
+                            <button onclick="clearOutput()" class="text-[10px] text-slate-600 hover:text-slate-400 uppercase font-bold transition-colors">Clear</button>
+                        </div>
+                        <div id="code-output" class="flex-1 p-4 font-mono text-xs text-slate-300 overflow-y-auto whitespace-pre-wrap"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+    // --- DATA ---
+    // Expanded modules with Level tags
+    const allModules = [
+        // BEGINNER MODULES
+        {
+            id: 0,
+            level: "Beginner",
+            title: "Introduction to Python",
+            content: `
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 text-brand-600 text-[10px] font-black uppercase tracking-widest mb-4 border border-brand-100">Module 01</div>
+                <h2 class="text-3xl lg:text-4xl text-slate-900 mb-6">The Power of Python</h2>
+                <p class="text-lg">Python is a high-level language known for its readability. It is the #1 choice for AI and Data Science.</p>
+                <h3>Your First Code</h3>
+                <pre><code class="language-python">print("Hello, SkillForge!")</code></pre>
+            `,
+            starterCode: `print("Hello, World!")`
+        },
+        {
+            id: 1,
+            level: "Beginner",
+            title: "Variables & Data Types",
+            content: `
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest mb-4 border border-purple-100">Module 02</div>
+                <h2 class="text-3xl lg:text-4xl text-slate-900 mb-6">Storing Information</h2>
+                <p>Variables are containers for storing data. Python is dynamically typed.</p>
+                <pre><code class="language-python">name = "Alex"\nage = 21\nprint(name)</code></pre>
+            `,
+            starterCode: `name = "Student"\nprint(name)`
+        },
+        // INTERMEDIATE MODULES
+        {
+            id: 2,
+            level: "Intermediate",
+            title: "Data Structures: Lists",
+            content: `
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest mb-4 border border-blue-100">Module 03</div>
+                <h2 class="text-3xl lg:text-4xl text-slate-900 mb-6">Working with Lists</h2>
+                <p>Lists allow you to store multiple items in a single variable. They are ordered and changeable.</p>
+                <pre><code class="language-python">fruits = ["apple", "banana", "cherry"]\nfruits.append("orange")\nprint(fruits)</code></pre>
+            `,
+            starterCode: `my_list = [10, 20, 30]\n# Add an item here\nprint(my_list)`
+        },
+        {
+            id: 3,
+            level: "Intermediate",
+            title: "Functions & Scope",
+            content: `
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest mb-4 border border-indigo-100">Module 04</div>
+                <h2 class="text-3xl lg:text-4xl text-slate-900 mb-6">Reusable Code</h2>
+                <p>A function is a block of code which only runs when it is called. You can pass data, known as parameters, into a function.</p>
+                <pre><code class="language-python">def my_function(fname):\n  print(fname + " Refsnes")\n\nmy_function("Emil")</code></pre>
+            `,
+            starterCode: `def greet(name):\n    return "Hello " + name\n\nprint(greet("User"))`
+        },
+        // ADVANCED MODULES
+        {
+            id: 4,
+            level: "Advanced",
+            title: "Object Oriented Programming",
+            content: `
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest mb-4 border border-orange-100">Module 05</div>
+                <h2 class="text-3xl lg:text-4xl text-slate-900 mb-6">Classes and Objects</h2>
+                <p>Python is an object oriented programming language. Almost everything in Python is an object, with its properties and methods.</p>
+                <pre><code class="language-python">class Person:\n  def __init__(self, name, age):\n    self.name = name\n    self.age = age\n\np1 = Person("John", 36)\nprint(p1.name)</code></pre>
+            `,
+            starterCode: `class Robot:\n    def speak(self):\n        print("Beep Boop")\n\nbot = Robot()\nbot.speak()`
+        },
+        {
+            id: 5,
+            level: "Advanced",
+            title: "Error Handling (Try/Except)",
+            content: `
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest mb-4 border border-red-100">Module 06</div>
+                <h2 class="text-3xl lg:text-4xl text-slate-900 mb-6">Robust Applications</h2>
+                <p>The <code>try</code> block lets you test a block of code for errors. The <code>except</code> block lets you handle the error.</p>
+                <pre><code class="language-python">try:\n  print(x)\nexcept NameError:\n  print("Variable x is not defined")</code></pre>
+            `,
+            starterCode: `try:\n    # Try dividing by zero\n    print(10/0)\nexcept ZeroDivisionError:\n    print("Cannot divide by zero!")`
+        }
+    ];
+
+    let activeModules = []; // This will hold the filtered list
+    let currentModuleIndex = 0;
+    let isPythonRuntimeReady = false;
+    let isSidebarOpen = true;
+    let isInterpreterOpen = true;
+    let iconsRefreshQueued = false;
+
+    // --- APP LOGIC ---
+
+    function queueLucideRefresh() {
+        if (iconsRefreshQueued) return;
+        iconsRefreshQueued = true;
+        requestAnimationFrame(() => {
+            lucide.createIcons();
+            iconsRefreshQueued = false;
+        });
+    }
+
+    function init() {
+        const userLevel = localStorage.getItem('selected_python_level') || 'Beginner';
+        
+        // Logic: 
+        // Beginner: Sees everything (0-5)
+        // Intermediate: Sees Intermediate + Advanced (2-5)
+        // Advanced: Sees only Advanced (4-5)
+        
+        if (userLevel === 'Intermediate') {
+            activeModules = allModules.filter(m => m.level === 'Intermediate' || m.level === 'Advanced');
+        } else if (userLevel === 'Advanced') {
+            activeModules = allModules.filter(m => m.level === 'Advanced');
+        } else {
+            activeModules = allModules; // Beginner sees all
+        }
+
+        renderSidebar(); 
+        loadModule(0);
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        isSidebarOpen = !isSidebarOpen;
+        if (isSidebarOpen) {
+            sidebar.classList.remove('sidebar-collapsed');
+            sidebar.classList.add('sidebar-expanded');
+            toggleBtn.innerHTML = '<i data-lucide="panel-left-close" class="w-5 h-5"></i>';
+        } else {
+            sidebar.classList.remove('sidebar-expanded');
+            sidebar.classList.add('sidebar-collapsed');
+            toggleBtn.innerHTML = '<i data-lucide="panel-left-open" class="w-5 h-5"></i>';
+        }
+        queueLucideRefresh();
+    }
+
+    function toggleInterpreter() {
+        const panel = document.getElementById('interpreterPanel');
+        const btnText = document.getElementById('editorToggleText');
+        isInterpreterOpen = !isInterpreterOpen;
+        if (isInterpreterOpen) {
+            panel.classList.remove('interpreter-closed');
+            panel.classList.add('interpreter-open');
+            btnText.innerText = "Hide Editor";
+        } else {
+            panel.classList.remove('interpreter-open');
+            panel.classList.add('interpreter-closed');
+            btnText.innerText = "Show Editor";
+        }
+        queueLucideRefresh();
+    }
+
+    function renderSidebar() {
+        const list = document.getElementById('moduleList');
+        // Use activeModules instead of allModules
+        list.innerHTML = activeModules.map((mod, index) => `
+            <button onclick="loadModule(${index})" 
+                class="module-item w-full flex items-center gap-4 p-3 rounded-xl text-sm font-medium transition-all duration-300 group border border-transparent hover:bg-white/60 hover:shadow-sm"
+                id="nav-item-${index}">
+                <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/80 text-xs font-bold text-slate-400 group-hover:text-brand-600 group-hover:scale-110 transition-all shadow-sm status-indicator">
+                    ${index + 1}
+                </span>
+                <span class="text-left text-slate-600 group-hover:text-slate-900 transition-colors">${mod.title}</span>
+            </button>
+        `).join('');
+        queueLucideRefresh();
+    }
+
+    function loadModule(index) {
+        currentModuleIndex = index;
+        const mod = activeModules[index]; // Use activeModules
+        
+        const contentArea = document.getElementById('contentArea');
+        contentArea.style.opacity = '0';
+        
+        setTimeout(() => {
+            contentArea.innerHTML = mod.content;
+            contentArea.style.opacity = '1';
+            const editor = document.getElementById('code-input');
+            editor.value = mod.starterCode;
+            Prism.highlightAll();
+            queueLucideRefresh();
+        }, 200);
+
+        // Update Sidebar Styles
+        document.querySelectorAll('.module-item').forEach((btn, i) => {
+            const indicator = btn.querySelector('.status-indicator');
+            if (i === index) {
+                btn.className = "module-item w-full flex items-center gap-4 p-3 rounded-xl text-sm font-bold transition-all duration-300 border border-brand-100 bg-brand-50/80 shadow-sm";
+                indicator.className = "w-8 h-8 flex items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white shadow-md status-indicator";
+            } else {
+                btn.className = "module-item w-full flex items-center gap-4 p-3 rounded-xl text-sm font-medium transition-all duration-300 group border border-transparent hover:bg-white/60 hover:shadow-sm";
+                indicator.className = "w-8 h-8 flex items-center justify-center rounded-lg bg-white/80 text-xs font-bold text-slate-400 status-indicator";
+            }
+        });
+
+        // Update Nav Buttons
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        prevBtn.disabled = index === 0;
+        
+        if (index === activeModules.length - 1) {
+            nextBtn.innerHTML = `Finish Course <i data-lucide="award" class="w-4 h-4"></i>`;
+        } else {
+            nextBtn.innerHTML = `Next Module <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+        }
+
+        // Update Progress
+        const progress = Math.round(((index + 1) / activeModules.length) * 100);
+        document.getElementById('progressBar').style.width = `${progress}%`;
+        document.getElementById('progressPercent').innerText = `${progress}%`;
+        document.getElementById('scrollContainer').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function changeModule(step) {
+        const newIndex = currentModuleIndex + step;
+        if (newIndex >= 0 && newIndex < activeModules.length) {
+            loadModule(newIndex);
+        }
+    }
+
+    function builtinRead(file) {
+        if (window.Sk && Sk.builtinFiles && Sk.builtinFiles.files[file]) {
+            return Sk.builtinFiles.files[file];
+        }
+        throw new Error(`File not found: '${file}'`);
+    }
+
+    async function initPythonRuntime() {
+        const status = document.getElementById('py-status');
+        try {
+            if (!window.Sk) {
+                throw new Error('Python runtime scripts did not load.');
+            }
+            if (status) {
+                status.className = "glass-panel px-4 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold text-indigo-600 transition-all";
+                status.innerHTML = `<span class="relative flex h-2 w-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span></span>Loading Python Runtime`;
+            }
+            isPythonRuntimeReady = true;
+            if (status) {
+                status.className = "glass-panel px-4 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold text-emerald-600 transition-all";
+                status.innerHTML = `<span class="relative flex h-2 w-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>Environment Ready`;
+            }
+        } catch (err) {
+            appendToTerminal(`Failed to load Python environment. ${err.message}`, true);
+            if (status) {
+                status.className = "glass-panel px-4 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold text-red-500 transition-all";
+                status.innerHTML = `<span class="relative flex h-2 w-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>Environment Unavailable`;
+            }
+        }
+    }
+
+    async function runPython() {
+        const btn = document.getElementById('runBtn');
+        const code = document.getElementById('code-input').value;
+        if (!isPythonRuntimeReady) {
+            appendToTerminal("Starting Python environment...", false);
+            await initPythonRuntime();
+        }
+        if (!isPythonRuntimeReady) return;
+        btn.disabled = true;
+        document.getElementById('code-output').innerHTML = ""; 
+        try {
+            Sk.pre = "code-output";
+            Sk.configure({
+                output: (text) => appendToTerminal(text),
+                read: builtinRead,
+                __future__: Sk.python3
+            });
+            await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, code, true));
+        } catch (err) {
+            appendToTerminal(err, true);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function appendToTerminal(text, isError = false) {
+        const outputDiv = document.getElementById('code-output');
+        const line = document.createElement('div');
+        line.className = isError ? 'text-red-400 mb-1' : 'text-slate-300 mb-1';
+        line.innerText = `>>> ${text}`;
+        outputDiv.appendChild(line);
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+    }
+
+    function clearOutput() {
+        document.getElementById('code-output').innerHTML = "";
+    }
+
+    init();
+    const pyStatus = document.getElementById('py-status');
+    if (pyStatus) {
+        pyStatus.className = "glass-panel px-4 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold text-slate-500 transition-all";
+        pyStatus.innerHTML = `<span class="relative flex h-2 w-2"><span class="relative inline-flex rounded-full h-2 w-2 bg-slate-400"></span></span>Loads when you run code`;
+    }
+    queueLucideRefresh();
+</script>
+</body>
+</html>

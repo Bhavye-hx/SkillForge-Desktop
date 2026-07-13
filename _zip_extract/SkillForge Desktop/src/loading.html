@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HumanOS - Loading</title>
+    <link rel="stylesheet" href="window-controls.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #e8f5e8 0%, #e0f2fe 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            position: relative;
+            padding-top: 0;
+        }
+
+        .titlebar {
+            background: rgba(255, 255, 255, 0.9);
+            color: #374151;
+        }
+
+        .window-control {
+            color: #374151;
+        }
+
+        .window-control:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: #1f2937;
+        }
+
+        .stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .loading-container {
+            text-align: center;
+            color: #374151;
+            z-index: 10;
+        }
+
+        .welcome-text {
+            font-size: 16px;
+            font-weight: 300;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+            color: #374151;
+        }
+
+        .app-name {
+            font-size: 64px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #10b981, #0ea5e9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tagline {
+            font-size: 18px;
+            font-weight: 300;
+            margin-bottom: 60px;
+            opacity: 0.9;
+            color: #6b7280;
+        }
+
+        .loading-bars {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            margin-bottom: 40px;
+            height: 80px;
+        }
+
+        .bar {
+            width: 6px;
+            background: linear-gradient(to top, #10b981, #06d6a0);
+            margin: 0 2px;
+            border-radius: 3px;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+
+        .bar:nth-child(1) { animation-delay: 0s; height: 15px; }
+        .bar:nth-child(2) { animation-delay: 0.1s; height: 25px; }
+        .bar:nth-child(3) { animation-delay: 0.2s; height: 35px; }
+        .bar:nth-child(4) { animation-delay: 0.3s; height: 50px; }
+        .bar:nth-child(5) { animation-delay: 0.4s; height: 65px; }
+        .bar:nth-child(6) { animation-delay: 0.5s; height: 80px; }
+        .bar:nth-child(7) { animation-delay: 0.6s; height: 65px; }
+        .bar:nth-child(8) { animation-delay: 0.7s; height: 50px; }
+        .bar:nth-child(9) { animation-delay: 0.8s; height: 35px; }
+        .bar:nth-child(10) { animation-delay: 0.9s; height: 25px; }
+        .bar:nth-child(11) { animation-delay: 1.0s; height: 15px; }
+
+        @keyframes loading {
+            0%, 100% { transform: scaleY(0.5); opacity: 0.7; }
+            50% { transform: scaleY(1.2); opacity: 1; }
+        }
+
+        .loading-text {
+            font-size: 20px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            color: #374151;
+        }
+
+        .progress-container {
+            width: 350px;
+            height: 8px;
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 4px;
+            margin: 0 auto;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #06d6a0, #0ea5e9);
+            border-radius: 4px;
+            width: 0%;
+            animation: progress 4s ease-out forwards;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .percentage {
+            font-size: 16px;
+            margin-top: 20px;
+            opacity: 0.8;
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        @keyframes progress {
+            to { width: 100%; }
+        }
+
+        .glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 107, 157, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">
+        SkillForge - Loading
+    </div>
+    
+    <div class="window-controls">
+        <div class="window-control minimize" onclick="minimizeWindow()">
+            <div class="minimize-icon"></div>
+        </div>
+        <div class="window-control maximize" onclick="maximizeWindow()">
+            <div class="maximize-icon"></div>
+        </div>
+        <div class="window-control close" onclick="closeWindow()">
+            <div class="close-icon"></div>
+        </div>
+    </div>
+
+    <div class="stars" id="stars"></div>
+    <div class="glow"></div>
+    
+    <div class="loading-container">
+        <div class="welcome-text">WELCOME TO</div>
+        <div class="app-name">SkillForge</div>
+        <div class="tagline">Optimize Your Learning, Health & Career</div>
+        
+        <div class="loading-bars">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+        
+        <div class="loading-text">STARTING...</div>
+        <div class="progress-container">
+            <div class="progress-bar"></div>
+        </div>
+        <div class="percentage" id="percentage">Loading 0%</div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        function minimizeWindow() {
+            ipcRenderer.send('window-minimize');
+        }
+        
+        function maximizeWindow() {
+            ipcRenderer.send('window-maximize');
+        }
+        
+        function closeWindow() {
+            ipcRenderer.send('window-close');
+        }
+
+        // Create stars
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            const fragment = document.createDocumentFragment();
+            for (let i = 0; i < 36; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                star.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                fragment.appendChild(star);
+            }
+            starsContainer.appendChild(fragment);
+        }
+
+        let progress = 0;
+        const percentageEl = document.getElementById('percentage');
+        
+        const interval = setInterval(() => {
+            progress += Math.random() * 28 + 18;
+            if (progress >= 100) {
+                progress = 100;
+                percentageEl.textContent = 'Starting 100%';
+                clearInterval(interval);
+                setTimeout(() => {
+                    window.location.href = 'auth-new.html';
+                }, 60);
+            } else {
+                percentageEl.textContent = `Starting ${Math.floor(progress)}%`;
+            }
+        }, 70);
+
+        createStars();
+    </script>
+</body>
+</html>

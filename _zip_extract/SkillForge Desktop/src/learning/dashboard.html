@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillForge - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .nav-item.active { background-color: #eff6ff; color: #2563eb; border-right: 3px solid #2563eb; }
+        
+        /* Loading & Modals */
+        #loading-screen { position: fixed; inset: 0; background: #f8fafc; z-index: 100; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
+        .modal-overlay { transition: opacity 0.2s ease-in-out; }
+        .modal-content { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-active { opacity: 1 !important; pointer-events: auto !important; }
+        .modal-content-active { transform: scale(1) !important; }
+        
+        /* Animations */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .animate-enter { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .toast-animate { animation: slideInRight 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; }
+        
+        #toastContainer { z-index: 9999; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex overflow-hidden">
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed top-6 right-6 flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- 1. LOADING SCREEN -->
+    <div id="loading-screen">
+        <div class="flex flex-col items-center">
+            <i data-lucide="loader-2" class="w-10 h-10 text-blue-600 animate-spin mb-4"></i>
+            <p class="text-slate-500 font-medium">Loading Admin Console...</p>
+        </div>
+    </div>
+
+    <!-- 2. CREATE NEW COURSE MODAL -->
+    <div id="addCourseModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm opacity-0 pointer-events-none">
+        <div id="addCourseContent" class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 transform scale-95 border border-slate-100">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-slate-900">Create New Course</h3>
+                <button onclick="closeModal('addCourseModal', 'addCourseContent')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <form onsubmit="event.preventDefault(); saveNewCourse();" class="space-y-4">
+                <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label><input type="text" id="c_title" required class="w-full p-3 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Category</label>
+                    <select id="c_category" class="w-full p-3 border rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="Core Semester 1">Core Semester 1</option>
+                        <option value="Core Semester 2">Core Semester 2</option>
+                        <option value="Core Semester 3">Core Semester 3</option>
+                        <option value="Elective">Elective</option>
+                    </select>
+                </div>
+                <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Color Theme</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="c_color" value="blue" checked class="accent-blue-600"> <span class="text-sm">Blue</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="c_color" value="rose" class="accent-rose-500"> <span class="text-sm">Rose</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="c_color" value="indigo" class="accent-indigo-500"> <span class="text-sm">Indigo</span></label>
+                    </div>
+                </div>
+                <button type="submit" id="saveCourseBtn" class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl mt-4 hover:bg-blue-700 transition">Create Course</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. TEST CASE MODAL -->
+    <div id="testCaseModal" class="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm opacity-0 pointer-events-none">
+        <div id="testCaseContent" class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 transform scale-95 border border-slate-100 flex flex-col max-h-[80vh]">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">Manage Test Cases</h3>
+                    <p class="text-xs text-slate-500">Define input/output pairs for coding validation.</p>
+                </div>
+                <button onclick="closeTestCaseModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 flex-1 overflow-y-auto bg-slate-50/50 space-y-4" id="testCaseListContainer"></div>
+            <div class="px-6 py-4 border-t border-slate-100 bg-white rounded-b-2xl flex justify-between items-center">
+                <button onclick="addTestCaseRow()" class="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Add New Case</button>
+                <button onclick="saveTestCasesToQuestion()" class="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition">Save Cases</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. MANAGE CONTENT MODAL -->
+    <div id="manageModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm opacity-0 pointer-events-none">
+        <div id="manageContent" class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col transform scale-95 border border-slate-100 overflow-hidden">
+            <div class="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div id="manageHeaderDefault">
+                    <h3 class="text-xl font-bold text-slate-900">Course Content Manager</h3>
+                    <p class="text-xs text-slate-500">Modify modules, questions, and test cases.</p>
+                </div>
+                <div id="manageHeaderEditor" class="hidden flex items-center gap-4">
+                    <button onclick="backToCourseList()" class="text-slate-500 hover:text-blue-600 flex items-center gap-1 text-sm font-bold"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button>
+                    <div class="h-6 w-px bg-slate-300"></div>
+                    <div><h3 class="text-lg font-bold text-slate-900" id="editorCourseTitle">Course</h3><p class="text-[10px] text-slate-500 uppercase tracking-wide">Editing Mode</p></div>
+                </div>
+                <button onclick="closeModal('manageModal', 'manageContent')" class="p-2 bg-white rounded-full border hover:bg-slate-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-8 bg-slate-50/50">
+                <div id="courseListView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <div id="editorView" class="hidden max-w-4xl mx-auto">
+                    <div id="editorContainer" class="space-y-6"></div>
+                    <div class="mt-8 flex justify-center"><button onclick="addModuleToEditor()" class="px-6 py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-blue-400 hover:text-blue-600 transition flex items-center gap-2"><i data-lucide="plus" class="w-5 h-5"></i> Add New Module</button></div>
+                </div>
+            </div>
+            <div id="editorFooter" class="hidden p-6 border-t border-slate-100 bg-white flex justify-end gap-3">
+                <button onclick="saveCourseChanges()" id="updateBtn" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg transition flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. SIDEBAR -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col hidden md:flex">
+        <div class="h-16 flex items-center px-6 border-b border-slate-100">
+            <div class="bg-blue-600 p-1.5 rounded-lg mr-3"><i data-lucide="layers" class="h-5 w-5 text-white"></i></div>
+            <span class="text-xl font-bold tracking-tight text-slate-900">SkillForge</span>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-6 space-y-1">
+            <p class="px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Menu</p>
+            <a href="#" class="nav-item active flex items-center px-6 py-3 text-sm font-medium transition-colors"><i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i> Dashboard</a>
+        </nav>
+        <div class="p-4 border-t border-slate-100">
+            <button onclick="auth.signOut().then(()=>window.location.href='admin.html')" class="flex items-center w-full px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                <i data-lucide="log-out" class="w-4 h-4 mr-2"></i> Sign Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- 6. MAIN CONTENT -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-10">
+            <h2 class="text-lg font-semibold text-slate-800" id="headerTitle">Overview</h2>
+            <div class="flex items-center gap-3">
+                <button onclick="openModal('addCourseModal', 'addCourseContent')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> New Course</button>
+                <button onclick="openManager()" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 shadow-sm flex items-center gap-2"><i data-lucide="edit-3" class="w-4 h-4"></i> Manage Content</button>
+                <div class="h-9 w-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold ml-4">A</div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 animate-enter">
+                <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm"><span class="text-slate-500 text-xs uppercase font-bold tracking-wider">Total Students</span><h3 class="text-3xl font-bold mt-2 text-slate-900" id="totalStudentsDisplay">--</h3></div>
+                <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm"><span class="text-slate-500 text-xs uppercase font-bold tracking-wider">Active Students</span><h3 class="text-3xl font-bold mt-2 text-slate-900" id="activeStudentsDisplay">--</h3></div>
+                <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm"><span class="text-slate-500 text-xs uppercase font-bold tracking-wider">Colleges</span><h3 class="text-3xl font-bold mt-2 text-slate-900" id="collegesDisplay">--</h3></div>
+                <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm"><span class="text-slate-500 text-xs uppercase font-bold tracking-wider">Pending</span><h3 class="text-3xl font-bold mt-2 text-slate-900" id="pendingDisplay">--</h3></div>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-8 mb-8 animate-enter delay-100">
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+                    <h3 class="font-bold text-slate-800 mb-6">Enrollment Growth</h3>
+                    <div class="h-64"><canvas id="enrollmentChart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+                    <h3 class="font-bold text-slate-800 mb-6">Skill Tracks</h3>
+                    <div class="h-64"><canvas id="skillsChart"></canvas></div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden animate-enter delay-200">
+                <div class="p-6 border-b border-slate-100"><h3 class="font-bold text-slate-800">Recent Registrations</h3></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left"><tbody class="divide-y divide-slate-100" id="recentTableBody"></tbody></table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FIREBASE -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        lucide.createIcons();
+        const firebaseConfig = {
+          apiKey: "AIzaSyAaoUIwYSTO_JibEJ-Qf8SleuwcUMWibFs",
+          authDomain: "skillforge-1c07c.firebaseapp.com",
+          projectId: "skillforge-1c07c",
+          storageBucket: "skillforge-1c07c.firebasestorage.app",
+          messagingSenderId: "246800623841",
+          appId: "1:246800623841:web:67994cb0a958ca292defa0",
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let editingCourseId = null;
+        let currentQuestionIdForTC = null;
+        let tempTestCases = [];
+
+        // --- CUSTOM TOAST SYSTEM ---
+        function showToast(msg, type) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const color = type === 'success' ? 'emerald' : 'red';
+            const icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            
+            toast.className = `toast-animate flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl bg-white/90 backdrop-blur-md border border-slate-100 min-w-[320px] pointer-events-auto`;
+            toast.innerHTML = `
+                <div class="text-${color}-500"><i data-lucide="${icon}" class="w-6 h-6"></i></div>
+                <div class="flex-1"><p class="text-sm font-bold text-slate-800">${msg}</p></div>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const adminDoc = await db.collection('admins').doc(user.email).get();
+                const data = adminDoc.exists ? adminDoc.data() : { role: 'college_admin', college: 'PIET University' };
+                loadDashboard(data.role, data.college);
+            } else {
+                window.location.href = "admin.html";
+            }
+        });
+
+        // 1. DASHBOARD LOAD
+        async function loadDashboard(role, collegeName) {
+            const loader = document.getElementById('loading-screen');
+            document.getElementById('headerTitle').innerText = role === 'super_admin' ? 'Super Admin Overview' : `${collegeName} Dashboard`;
+
+            let query = db.collection('students');
+            if (role === 'college_admin') query = query.where('college', '==', collegeName);
+
+            const snapshot = await query.get();
+            const students = snapshot.docs.map(doc => doc.data());
+
+            document.getElementById('totalStudentsDisplay').innerText = students.length;
+            document.getElementById('activeStudentsDisplay').innerText = students.filter(s => s.status === 'Active').length;
+            document.getElementById('pendingDisplay').innerText = students.filter(s => s.status === 'Pending').length;
+            document.getElementById('collegesDisplay').innerText = role === 'super_admin' ? [...new Set(students.map(s => s.college))].length : "1";
+
+            const trackCounts = {};
+            students.forEach(s => { if(s.track) trackCounts[s.track] = (trackCounts[s.track] || 0) + 1; });
+            renderCharts(Object.keys(trackCounts), Object.values(trackCounts), students.length);
+
+            const tableBody = document.getElementById('recentTableBody');
+            tableBody.innerHTML = '';
+            students.slice(0, 5).forEach(student => {
+                tableBody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50"><td class="px-6 py-4 font-medium text-slate-900">${student.name||'Student'}</td><td class="px-6 py-4 text-slate-600">${student.college||'N/A'}</td><td class="px-6 py-4 text-slate-600">${student.track||'Undecided'}</td><td class="px-6 py-4"><span class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold">${student.status||'Pending'}</span></td></tr>`;
+            });
+
+            if(loader) loader.style.opacity = '0';
+            setTimeout(() => { if(loader) loader.remove() }, 500);
+        }
+
+        // 2. COURSE MANAGER
+        async function openManager() {
+            openModal('manageModal', 'manageContent');
+            const listContainer = document.getElementById('courseListView');
+            listContainer.innerHTML = '<div class="col-span-full text-center py-10"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-blue-500"></i></div>';
+            lucide.createIcons();
+
+            const snapshot = await db.collection('academic_courses').get();
+            listContainer.innerHTML = '';
+            snapshot.forEach(doc => {
+                const c = doc.data();
+                listContainer.innerHTML += `<div onclick="editCourse('${doc.id}', '${c.title}')" class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-lg hover:border-blue-400 cursor-pointer transition group"><div class="flex justify-between items-start mb-3"><span class="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded uppercase">${c.category}</span><i data-lucide="edit" class="w-4 h-4 text-slate-300 group-hover:text-blue-500"></i></div><h4 class="font-bold text-slate-900 text-lg mb-1">${c.title}</h4><p class="text-sm text-slate-500">${c.modules ? c.modules.length : 0} Modules</p></div>`;
+            });
+            lucide.createIcons();
+        }
+
+        async function editCourse(id, title) {
+            editingCourseId = id;
+            document.getElementById('editorCourseTitle').innerText = title;
+            document.getElementById('courseListView').classList.add('hidden');
+            document.getElementById('manageHeaderDefault').classList.add('hidden');
+            document.getElementById('editorView').classList.remove('hidden');
+            document.getElementById('manageHeaderEditor').classList.remove('hidden');
+            document.getElementById('editorFooter').classList.remove('hidden');
+
+            const container = document.getElementById('editorContainer');
+            container.innerHTML = '';
+            const doc = await db.collection('academic_courses').doc(id).get();
+            const data = doc.data();
+            if (data.modules) data.modules.forEach(mod => addModuleToEditor(mod));
+            lucide.createIcons();
+        }
+
+        function addModuleToEditor(existingData = null) {
+            const container = document.getElementById('editorContainer');
+            const modHTML = document.createElement('div');
+            modHTML.className = "module-block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm";
+            modHTML.innerHTML = `
+                <div class="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
+                    <div class="flex items-center gap-3 w-full"><i data-lucide="folder" class="w-5 h-5 text-slate-400"></i><input type="text" class="mod-title w-full bg-transparent font-bold text-slate-800 outline-none" value="${existingData ? existingData.title : ''}" placeholder="Module Name"></div>
+                    <button onclick="this.closest('.module-block').remove()" class="text-slate-400 hover:text-red-500"><i data-lucide="trash" class="w-4 h-4"></i></button>
+                </div>
+                <div class="p-4 bg-white space-y-4">
+                    <div class="questions-list space-y-4"></div>
+                    <button onclick="addQuestionToModule(this)" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add Question</button>
+                </div>`;
+            container.appendChild(modHTML);
+            if (existingData && existingData.questions) {
+                const qList = modHTML.querySelector('.questions-list');
+                existingData.questions.forEach(q => addQuestionToModule(null, q, qList));
+            }
+            lucide.createIcons();
+        }
+
+        function addQuestionToModule(btn, existingQ = null, directContainer = null) {
+            const container = directContainer || btn.previousElementSibling;
+            const qId = Date.now() + Math.random();
+            const qType = existingQ ? (existingQ.type || 'mcq') : 'mcq';
+            const div = document.createElement('div');
+            div.className = "question-block bg-slate-50 border border-slate-100 rounded-lg p-3";
+            div.dataset.testCases = existingQ && existingQ.testCases ? JSON.stringify(existingQ.testCases) : '[]';
+            div.dataset.qid = qId;
+            div.innerHTML = `
+                <div class="flex justify-between mb-2">
+                    <input type="text" class="q-text w-full text-sm bg-transparent border-b border-slate-200 pb-1 outline-none font-medium" value="${existingQ ? existingQ.text : ''}" placeholder="Question text...">
+                    <button onclick="this.closest('.question-block').remove()" class="text-slate-300 hover:text-red-500 ml-2"><i data-lucide="x" class="w-3 h-3"></i></button>
+                </div>
+                <select class="q-type-selector text-xs p-1 border rounded bg-white mb-2" onchange="toggleQuestionType(this, '${qId}')">
+                    <option value="mcq" ${qType === 'mcq' ? 'selected' : ''}>Multiple Choice</option>
+                    <option value="code" ${qType === 'code' ? 'selected' : ''}>Coding Challenge</option>
+                </select>
+                <div id="mcq-section-${qId}" class="${qType === 'code' ? 'hidden' : ''} space-y-1.5">
+                    ${[0,1,2,3].map(i => `<div class="flex items-center gap-2"><input type="radio" name="rad-${qId}" value="${i}" ${existingQ && existingQ.correctAnswer == i ? 'checked' : ''}><input type="text" class="opt-${i} w-full text-xs bg-white border border-slate-200 rounded px-2 py-1 outline-none" value="${existingQ ? existingQ.options[i] : ''}" placeholder="Option ${i+1}"></div>`).join('')}
+                </div>
+                <div id="code-section-${qId}" class="${qType === 'mcq' ? 'hidden' : ''} border-t pt-3 mt-3">
+                    <button onclick="openTestCaseModal('${qId}')" class="text-xs text-white bg-purple-600 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1"><i data-lucide="settings-2" class="w-3 h-3"></i> Manage Test Cases</button>
+                </div>`;
+            container.appendChild(div);
+            lucide.createIcons();
+        }
+
+        // --- SAVING LOGIC ---
+        async function saveCourseChanges() {
+            const btn = document.getElementById('updateBtn');
+            btn.innerHTML = "Saving...";
+            const modules = [];
+            document.querySelectorAll('.module-block').forEach(mod => {
+                const title = mod.querySelector('.mod-title').value;
+                const qs = [];
+                mod.querySelectorAll('.question-block').forEach(q => {
+                    const text = q.querySelector('.q-text').value;
+                    const type = q.querySelector('.q-type-selector').value;
+                    const options = [0,1,2,3].map(i => q.querySelector(`.opt-${i}`).value);
+                    let correctAnswer = 0;
+                    q.querySelectorAll('input[type="radio"]').forEach((r, i) => { if(r.checked) correctAnswer = i; });
+                    const testCases = JSON.parse(q.dataset.testCases || '[]');
+                    if(text) qs.push({ text, type, options, correctAnswer, testCases });
+                });
+                if(title) modules.push({ title, questions: qs });
+            });
+
+            try {
+                await db.collection('academic_courses').doc(editingCourseId).update({ modules });
+                showToast("Course content updated successfully!", "success");
+                backToCourseList();
+            } catch(e) { showToast("Error saving: " + e.message, "error"); } 
+            finally { btn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> Save Changes`; lucide.createIcons(); }
+        }
+
+        async function saveNewCourse() {
+            const title = document.getElementById('c_title').value;
+            const category = document.getElementById('c_category').value;
+            const color = document.querySelector('input[name="c_color"]:checked').value;
+            try {
+                await db.collection('academic_courses').add({ title, category, color, modules: [], createdAt: new Date().toISOString() });
+                showToast("New course created successfully!", "success");
+                closeModal('addCourseModal', 'addCourseContent');
+                document.getElementById('c_title').value = "";
+            } catch(e) { showToast("Error creating course", "error"); }
+        }
+
+        // --- TEST CASE MODAL UTILS ---
+        function openTestCaseModal(qid) {
+            currentQuestionIdForTC = qid;
+            const qBlock = document.querySelector(`.question-block[data-qid="${qid}"]`);
+            tempTestCases = JSON.parse(qBlock.dataset.testCases || '[]');
+            renderTestCaseList();
+            openModal('testCaseModal', 'testCaseContent');
+        }
+        function closeTestCaseModal() { closeModal('testCaseModal', 'testCaseContent'); }
+        function renderTestCaseList() {
+            const container = document.getElementById('testCaseListContainer');
+            container.innerHTML = tempTestCases.length ? '' : '<p class="text-center text-slate-400 py-10">No cases added.</p>';
+            tempTestCases.forEach((tc, i) => {
+                const row = document.createElement('div');
+                row.className = "bg-white p-4 rounded-xl border border-slate-200 relative";
+                row.innerHTML = `<div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-[10px] font-bold text-slate-400 uppercase">Input</label><textarea onchange="tempTestCases[${i}].input=this.value" class="w-full text-xs bg-slate-50 border rounded p-2 h-16">${tc.input}</textarea></div>
+                    <div><label class="text-[10px] font-bold text-slate-400 uppercase">Output</label><textarea onchange="tempTestCases[${i}].output=this.value" class="w-full text-xs bg-slate-50 border rounded p-2 h-16">${tc.output}</textarea></div>
+                </div><button onclick="tempTestCases.splice(${i},1);renderTestCaseList()" class="absolute top-2 right-2 text-red-400"><i data-lucide="trash" class="w-4 h-4"></i></button>`;
+                container.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+        function addTestCaseRow() { tempTestCases.push({ input: '', output: '' }); renderTestCaseList(); }
+        function saveTestCasesToQuestion() {
+            const qBlock = document.querySelector(`.question-block[data-qid="${currentQuestionIdForTC}"]`);
+            qBlock.dataset.testCases = JSON.stringify(tempTestCases);
+            closeTestCaseModal();
+            showToast("Test cases cached locally.", "success");
+        }
+
+        // Helpers
+        function toggleQuestionType(sel, id) {
+            document.getElementById(`mcq-section-${id}`).classList.toggle('hidden', sel.value === 'code');
+            document.getElementById(`code-section-${id}`).classList.toggle('hidden', sel.value === 'mcq');
+        }
+        function backToCourseList() {
+            document.getElementById('editorView').classList.add('hidden');
+            document.getElementById('manageHeaderEditor').classList.add('hidden');
+            document.getElementById('editorFooter').classList.add('hidden');
+            document.getElementById('courseListView').classList.remove('hidden');
+            document.getElementById('manageHeaderDefault').classList.remove('hidden');
+        }
+        function renderCharts(labels, data, total) {
+            new Chart(document.getElementById('skillsChart').getContext('2d'), { type: 'doughnut', data: { labels, datasets: [{ data, backgroundColor: ['#2563eb', '#9333ea', '#f97316', '#10b981'], borderWidth: 0 }] }, options: { responsive: true, cutout: '70%', plugins: { legend: { position: 'bottom' } } } });
+            new Chart(document.getElementById('enrollmentChart').getContext('2d'), { type: 'line', data: { labels: ['Jan','Feb','Mar','Apr','May'], datasets: [{ label: 'Students', data: [10, 20, 35, 45, total], borderColor: '#2563eb', tension: 0.4, fill: true, backgroundColor: '#eff6ff' }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true } } } });
+        }
+        function openModal(id, content) { document.getElementById(id).classList.add('modal-active'); document.getElementById(content).classList.add('modal-content-active'); }
+        function closeModal(id, content) { document.getElementById(id).classList.remove('modal-active'); document.getElementById(content).classList.remove('modal-content-active'); }
+    </script>
+</body>
+</html>

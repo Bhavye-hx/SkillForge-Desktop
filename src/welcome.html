@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HumanOS - Welcome</title>
+    <link rel="stylesheet" href="window-controls.css">
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script defer src="firebase-init.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 50%, #e8f5e8 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .welcome-container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .welcome-title {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .app-name {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ff6b9d, #4ecdc4, #2196F3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tagline {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 40px;
+            font-weight: 300;
+        }
+
+        .features {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 40px;
+            gap: 20px;
+        }
+
+        .feature {
+            flex: 1;
+            padding: 20px;
+            background: rgba(33, 150, 243, 0.1);
+            border-radius: 15px;
+            border: 2px solid rgba(33, 150, 243, 0.2);
+        }
+
+        .feature-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+
+        .feature h3 {
+            font-size: 16px;
+            color: #2196F3;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .feature p {
+            font-size: 14px;
+            color: #666;
+            font-weight: 400;
+        }
+
+        .get-started-btn {
+            background: linear-gradient(135deg, #2196F3, #4CAF50);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(33, 150, 243, 0.3);
+        }
+
+        .get-started-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(33, 150, 243, 0.4);
+        }
+
+        .get-started-btn:disabled {
+            opacity: 0.85;
+            cursor: wait;
+            transform: none;
+        }
+
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(33, 150, 243, 0.6);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+            50% { transform: translateY(-100px) rotate(180deg); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">
+        SkillForge - Welcome
+    </div>
+    
+    <div class="window-controls">
+        <div class="window-control minimize" onclick="minimizeWindow()">
+            <div class="minimize-icon"></div>
+        </div>
+        <div class="window-control maximize" onclick="maximizeWindow()">
+            <div class="maximize-icon"></div>
+        </div>
+        <div class="window-control close" onclick="closeWindow()">
+            <div class="close-icon"></div>
+        </div>
+    </div>
+
+    <div class="particles" id="particles"></div>
+    
+    <div class="welcome-container">
+        <div class="welcome-title">WELCOME TO</div>
+        <div class="app-name">SkillForge</div>
+        <div class="tagline" id="welcomeTagline">Optimize Your Learning, Health & Career</div>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📚</div>
+                <h3>Personalized Learning</h3>
+                <p>AI-driven curriculum</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">💪</div>
+                <h3>Health Monitoring</h3>
+                <p>Track wellness metrics</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🚀</div>
+                <h3>Career Mentorship</h3>
+                <p>Professional guidance</p>
+            </div>
+        </div>
+        
+        <button class="get-started-btn" id="getStartedBtn" onclick="getStarted()">Get Started</button>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        let welcomeRedirectScheduled = false;
+
+        function waitForFirebaseApp(onReady, onFallback) {
+            let attempts = 0;
+            const maxAttempts = 30;
+            const timer = setInterval(() => {
+                attempts += 1;
+                if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+                    clearInterval(timer);
+                    onReady();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(timer);
+                    onFallback();
+                }
+            }, 100);
+        }
+        
+        function minimizeWindow() {
+            ipcRenderer.send('window-minimize');
+        }
+        
+        function maximizeWindow() {
+            ipcRenderer.send('window-maximize');
+        }
+        
+        function closeWindow() {
+            ipcRenderer.send('window-close');
+        }
+
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        function goToCommandCentre() {
+            if (welcomeRedirectScheduled) {
+                return;
+            }
+
+            welcomeRedirectScheduled = true;
+            window.location.replace('navigation.html');
+        }
+
+        function startReturningUserFlow(user) {
+            const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Scholar');
+            const welcomeTitle = document.querySelector('.welcome-title');
+            const welcomeTagline = document.getElementById('welcomeTagline');
+            const getStartedBtn = document.getElementById('getStartedBtn');
+
+            welcomeTitle.textContent = `WELCOME BACK, ${name.toUpperCase()}`;
+            welcomeTagline.textContent = 'Opening your command centre...';
+            getStartedBtn.textContent = 'Opening...';
+            getStartedBtn.disabled = true;
+
+            setTimeout(goToCommandCentre, 1400);
+        }
+
+        function initializeWelcomeFlow() {
+            const params = new URLSearchParams(window.location.search);
+            const isReturningMode = params.get('mode') === 'returning';
+
+            if (!isReturningMode) {
+                return;
+            }
+
+            waitForFirebaseApp(() => {
+                try {
+                    const auth = firebase.auth();
+                    let unsubscribe = () => {};
+
+                    unsubscribe = auth.onAuthStateChanged((user) => {
+                        unsubscribe();
+                        if (user) {
+                            startReturningUserFlow(user);
+                        } else {
+                            window.location.replace('auth-new.html');
+                        }
+                    }, () => {
+                        window.location.replace('auth-new.html');
+                    });
+                } catch (error) {
+                    console.error('Welcome auth check failed:', error);
+                    window.location.replace('auth-new.html');
+                }
+            }, () => {
+                window.location.replace('auth-new.html');
+            });
+        }
+
+        function getStarted() {
+            if (typeof firebase !== 'undefined' && firebase.auth().currentUser) {
+                goToCommandCentre();
+                return;
+            }
+
+            window.location.replace('auth-new.html');
+        }
+
+        createParticles();
+        initializeWelcomeFlow();
+    </script>
+</body>
+</html>

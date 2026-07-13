@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillForge</title>
+    <link rel="stylesheet" href="window-controls.css">
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script defer src="firebase-init.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #eef0f8 0%, #e8eaf6 40%, #ede8f5 100%);
+            height: 100vh;
+            padding-top: 32px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* subtle dot grid */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image: radial-gradient(circle, #6366f120 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ── TOPBAR ── */
+        .topbar {
+            position: relative; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 36px; height: 52px;
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(99,102,241,0.08);
+            box-shadow: 0 1px 16px rgba(99,102,241,0.06);
+            flex-shrink: 0;
+        }
+        .logo { display: flex; align-items: center; gap: 9px; }
+        .logo-mark {
+            width: 30px; height: 30px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 8px; display: flex; align-items: center;
+            justify-content: center; color: white; font-weight: 800; font-size: 14px;
+            box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+        }
+        .logo-text { font-size: 16px; font-weight: 800; color: #1e1b4b; letter-spacing: -0.3px; }
+        .logo-year {
+            font-size: 10px; font-weight: 700; color: #6366f1;
+            background: #eef2ff; border: 1px solid #c7d2fe;
+            padding: 2px 7px; border-radius: 20px;
+        }
+        .topbar-right { display: flex; align-items: center; gap: 10px; }
+        .user-pill {
+            display: flex; align-items: center; gap: 8px;
+            background: white; border: 1px solid #e0e7ff;
+            border-radius: 50px; padding: 4px 14px 4px 5px;
+            box-shadow: 0 2px 8px rgba(99,102,241,0.08);
+        }
+        .user-avatar {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 700; font-size: 11px;
+        }
+        .user-name { font-size: 13px; font-weight: 600; color: #374151; }
+        .logout-btn {
+            background: white; border: 1px solid #fecaca; color: #ef4444;
+            padding: 5px 13px; border-radius: 8px; font-size: 12px;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .logout-btn:hover { background: #fef2f2; box-shadow: 0 2px 8px rgba(239,68,68,0.15); }
+
+        /* ── HERO ── */
+        .hero {
+            position: relative; z-index: 5;
+            text-align: center; padding: 16px 20px 10px; flex-shrink: 0;
+        }
+        .hero-title {
+            font-size: 26px; font-weight: 400; color: #374151; letter-spacing: -0.3px;
+        }
+        .hero-title strong {
+            font-weight: 800; color: #1e1b4b;
+        }
+        .hero-sub { font-size: 12.5px; color: #9ca3af; margin-top: 3px; }
+
+        /* ── GRID ── */
+        .grid-wrap {
+            position: relative; z-index: 5;
+            flex: 1; display: flex; flex-direction: column;
+            justify-content: center; padding: 4px 28px 10px; gap: 12px; min-height: 0;
+        }
+        .row { display: grid; gap: 12px; }
+        .row-3 { grid-template-columns: repeat(3, 1fr); }
+        .row-2 { grid-template-columns: repeat(2, 1fr); max-width: 67%; margin: 0 auto; width: 100%; }
+
+        /* ── CARD BASE ── */
+        .nav-card {
+            background: rgba(255,255,255,0.82);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 18px 20px 16px;
+            cursor: pointer;
+            border: 1.5px solid rgba(255,255,255,0.9);
+            box-shadow: 0 4px 20px rgba(99,102,241,0.07), 0 1px 4px rgba(0,0,0,0.04);
+            transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1),
+                        box-shadow 0.3s ease,
+                        background 0.3s ease,
+                        border-color 0.3s ease;
+            position: relative; overflow: hidden;
+        }
+
+        /* magnetic glow blob that follows cursor */
+        .nav-card .glow {
+            position: absolute;
+            width: 180px; height: 180px;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s;
+            transform: translate(-50%, -50%);
+            filter: blur(40px);
+        }
+        .nav-card:hover .glow { opacity: 1; }
+
+        .nav-card:hover {
+            transform: translateY(-5px) scale(1.015);
+            box-shadow: 0 20px 48px rgba(99,102,241,0.13), 0 4px 12px rgba(0,0,0,0.06);
+            background: rgba(255,255,255,0.96);
+        }
+        .nav-card:active { transform: scale(0.98); }
+
+        /* accent colors */
+        .c-dashboard { --a:#10b981; --ag:#0ea5e9; --glow-c:rgba(16,185,129,0.25); }
+        .c-learning   { --a:#6366f1; --ag:#8b5cf6; --glow-c:rgba(99,102,241,0.25); }
+        .c-career     { --a:#f59e0b; --ag:#f97316; --glow-c:rgba(245,158,11,0.25); }
+        .c-emotional  { --a:#ec4899; --ag:#a855f7; --glow-c:rgba(236,72,153,0.25); }
+        .c-health     { --a:#22c55e; --ag:#10b981; --glow-c:rgba(34,197,94,0.25); }
+
+        .nav-card:hover { border-color: var(--a)44; }
+        .nav-card .glow { background: radial-gradient(circle, var(--glow-c), transparent 70%); }
+
+        /* top row: icon floats above */
+        .card-top {
+            display: flex; justify-content: space-between;
+            align-items: flex-start; margin-bottom: 10px;
+        }
+        .nav-icon-wrap {
+            font-size: 42px; line-height: 1;
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15));
+            transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+            display: block;
+        }
+        .nav-card:hover .nav-icon-wrap { transform: translateY(-6px) scale(1.08); }
+
+        .card-badge {
+            font-size: 10px; font-weight: 700; padding: 3px 9px;
+            border-radius: 20px; letter-spacing: 0.3px; align-self: flex-start;
+        }
+        .c-dashboard .card-badge { background:#d1fae5; color:#059669; }
+        .c-learning  .card-badge { background:#ede9fe; color:#7c3aed; }
+        .c-career    .card-badge { background:#fef3c7; color:#d97706; }
+        .c-emotional .card-badge { background:#fce7f3; color:#be185d; }
+        .c-health    .card-badge { background:#dcfce7; color:#16a34a; }
+
+        .nav-title { font-size: 15px; font-weight: 700; color: #1e1b4b; margin-bottom: 3px; }
+        .nav-desc  { font-size: 11.5px; color: #94a3b8; line-height: 1.4; margin-bottom: 12px; }
+
+        /* ── LIVE WIDGETS ── */
+
+        /* Dashboard widget */
+        .widget-rows { display: flex; flex-direction: column; gap: 6px; }
+        .widget-row {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 11px;
+        }
+        .widget-row-label { color: #6b7280; font-weight: 500; }
+        .widget-row-val { font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 3px; }
+        .val-green { color: #10b981; }
+        .val-blue  { color: #6366f1; }
+        .mini-bar-wrap { flex: 1; height: 4px; background: #f1f5f9; border-radius: 4px; margin: 0 8px; overflow: hidden; }
+        .mini-bar { height: 100%; border-radius: 4px; transition: width 1.2s ease; }
+        .bar-green { background: linear-gradient(90deg,#10b981,#0ea5e9); }
+        .bar-indigo { background: linear-gradient(90deg,#6366f1,#8b5cf6); }
+
+        /* Learning widget */
+        .widget-list { display: flex; flex-direction: column; gap: 0; }
+        .widget-list-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 5px 0; border-bottom: 1px solid #f1f5f9; font-size: 11.5px;
+            color: #374151; font-weight: 500; cursor: pointer;
+            transition: color 0.2s;
+        }
+        .widget-list-item:last-child { border-bottom: none; }
+        .widget-list-item:hover { color: #6366f1; }
+        .widget-list-item span { color: #d1d5db; font-size: 13px; }
+        .donut-wrap {
+            position: absolute; top: 16px; right: 18px;
+            width: 38px; height: 38px;
+        }
+        .donut-wrap svg { transform: rotate(-90deg); }
+
+        /* Career widget */
+        .career-chart {
+            position: relative; height: 44px; margin-bottom: 4px;
+        }
+        .career-chart svg { width: 100%; height: 100%; overflow: visible; }
+        .career-milestone {
+            font-size: 10px; font-weight: 700; color: #f59e0b;
+            background: #fffbeb; border: 1px solid #fde68a;
+            padding: 3px 8px; border-radius: 6px; display: inline-block;
+        }
+
+        /* Emotional widget */
+        .mood-bar-wrap { margin-bottom: 6px; }
+        .mood-label { font-size: 10px; font-weight: 700; color: #6b7280; margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .mood-chart { height: 32px; position: relative; }
+        .mood-chart svg { width: 100%; height: 100%; overflow: visible; }
+        .mood-emojis { display: flex; gap: 6px; margin-top: 6px; }
+        .mood-emoji {
+            font-size: 16px; cursor: pointer;
+            transition: transform 0.2s; filter: grayscale(0.3);
+        }
+        .mood-emoji:hover { transform: scale(1.3); filter: grayscale(0); }
+        .mood-emoji.active { transform: scale(1.25); filter: grayscale(0); }
+
+        /* Health widget */
+        .health-rows { display: flex; flex-direction: column; gap: 7px; }
+        .health-row { font-size: 11px; }
+        .health-row-top { display: flex; justify-content: space-between; margin-bottom: 3px; }
+        .health-row-label { color: #374151; font-weight: 600; }
+        .health-row-val   { color: #6b7280; }
+        .health-bar-wrap  { height: 5px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+        .health-bar { height: 100%; border-radius: 4px; transition: width 1.4s ease; }
+        .hb-green  { background: linear-gradient(90deg,#22c55e,#10b981); }
+        .hb-teal   { background: linear-gradient(90deg,#14b8a6,#06b6d4); }
+        .hb-indigo { background: linear-gradient(90deg,#6366f1,#8b5cf6); }
+
+        /* ── FOOTER ── */
+        .footer {
+            position: relative; z-index: 5;
+            text-align: center; padding: 6px;
+            font-size: 11px; color: #c7d2fe; flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">SkillForge</div>
+    <div class="window-controls">
+        <div class="window-control minimize" onclick="minimizeWindow()"><div class="minimize-icon"></div></div>
+        <div class="window-control maximize" onclick="maximizeWindow()"><div class="maximize-icon"></div></div>
+        <div class="window-control close"    onclick="closeWindow()"><div class="close-icon"></div></div>
+    </div>
+
+    <div class="topbar">
+        <div class="logo">
+            <div class="logo-mark">S</div>
+            <span class="logo-text">SkillForge</span>
+            <span class="logo-year">2026</span>
+        </div>
+        <div class="topbar-right">
+            <div class="user-pill">
+                <div class="user-avatar" id="userAvatar">S</div>
+                <span class="user-name" id="userName">Scholar</span>
+            </div>
+            <button class="logout-btn" onclick="logout()">Sign Out</button>
+        </div>
+    </div>
+
+    <div class="hero">
+        <h1 class="hero-title">Welcome back, <strong id="welcomeName">Scholar</strong></h1>
+        <p class="hero-sub">Here's your command center — pick a module to continue</p>
+    </div>
+
+    <div class="grid-wrap">
+
+        <!-- ROW 1 -->
+        <div class="row row-3">
+
+            <!-- Main Dashboard -->
+            <div class="nav-card c-dashboard" onclick="navigateTo('dashboard-final.html')">
+                <div class="glow"></div>
+                <div class="card-top">
+                    <span class="nav-icon-wrap">📊</span>
+                    <span class="card-badge">Live</span>
+                </div>
+                <div class="nav-title">Main Dashboard</div>
+                <div class="nav-desc">Progress overview, insights & quick actions</div>
+                <div class="widget-rows">
+                    <div class="widget-row">
+                        <span class="widget-row-label">Analytics</span>
+                        <div class="mini-bar-wrap"><div class="mini-bar bar-green" style="width:0%" data-w="78%"></div></div>
+                        <span class="widget-row-val val-green">✓ On Track</span>
+                    </div>
+                    <div class="widget-row">
+                        <span class="widget-row-label">Progress</span>
+                        <div class="mini-bar-wrap"><div class="mini-bar bar-indigo" style="width:0%" data-w="62%"></div></div>
+                        <span class="widget-row-val val-blue">↑ Up 5%</span>
+                    </div>
+                    <div class="widget-row">
+                        <span class="widget-row-label">Overview</span>
+                        <div class="mini-bar-wrap"><div class="mini-bar bar-green" style="width:0%" data-w="91%"></div></div>
+                        <span class="widget-row-val val-green">↑ Up 12%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Learning Hub -->
+            <div class="nav-card c-learning" onclick="navigateTo('learning/student_dashboard.html')" style="position:relative;">
+                <div class="glow"></div>
+                <!-- donut progress ring -->
+                <div class="donut-wrap">
+                    <svg viewBox="0 0 36 36" width="38" height="38">
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#ede9fe" stroke-width="4"/>
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#6366f1" stroke-width="4"
+                            stroke-dasharray="56 88" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="card-top">
+                    <span class="nav-icon-wrap">📖</span>
+                </div>
+                <div class="nav-title">Learning Hub</div>
+                <div class="nav-desc">Courses, assessments & practice arena</div>
+                <div class="widget-list">
+                    <div class="widget-list-item">Course Progress <span>›</span></div>
+                    <div class="widget-list-item">Assessments due <span>›</span></div>
+                    <div class="widget-list-item">Arena Ranking <span>›</span></div>
+                </div>
+            </div>
+
+            <!-- Career Roadmap -->
+            <div class="nav-card c-career" onclick="navigateTo('career.html')">
+                <div class="glow"></div>
+                <div class="card-top">
+                    <span class="nav-icon-wrap">🧭</span>
+                    <span class="card-badge">AI Powered</span>
+                </div>
+                <div class="nav-title">Career Roadmap</div>
+                <div class="nav-desc">AI-powered career guidance & job matching</div>
+                <div class="career-chart">
+                    <svg viewBox="0 0 200 44" preserveAspectRatio="none">
+                        <polyline points="0,38 40,28 80,32 120,18 160,22 200,8"
+                            fill="none" stroke="#fde68a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="40"  cy="28" r="3.5" fill="#f59e0b"/>
+                        <circle cx="80"  cy="32" r="3.5" fill="#f59e0b"/>
+                        <circle cx="120" cy="18" r="3.5" fill="#f59e0b"/>
+                        <circle cx="160" cy="22" r="3.5" fill="#f59e0b"/>
+                        <circle cx="200" cy="8"  r="5"   fill="#f97316"/>
+                    </svg>
+                </div>
+                <span class="career-milestone">Next Milestone: Interview Prep</span>
+            </div>
+
+        </div>
+
+        <!-- ROW 2 -->
+        <div class="row row-2">
+
+            <!-- Emotional Wellness -->
+            <div class="nav-card c-emotional" onclick="navigateTo('emotional.html')">
+                <div class="glow"></div>
+                <div class="card-top">
+                    <span class="nav-icon-wrap">🧘</span>
+                    <span class="card-badge">Check In</span>
+                </div>
+                <div class="nav-title">Emotional Wellness</div>
+                <div class="nav-desc">Mental health, mood tracking & mindfulness</div>
+                <div class="mood-bar-wrap">
+                    <div class="mood-label"><span>Mood</span><span style="color:#ec4899">⋯</span></div>
+                    <div class="mood-chart">
+                        <svg viewBox="0 0 200 32" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#ec4899" stop-opacity="0.3"/>
+                                    <stop offset="100%" stop-color="#ec4899" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M0,24 C30,20 50,8 80,12 C110,16 130,6 160,10 C180,12 190,8 200,6 L200,32 L0,32 Z"
+                                fill="url(#moodGrad)"/>
+                            <path d="M0,24 C30,20 50,8 80,12 C110,16 130,6 160,10 C180,12 190,8 200,6"
+                                fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="mood-emojis" id="moodEmojis">
+                    <span class="mood-emoji" onclick="selectMood(this)">😔</span>
+                    <span class="mood-emoji" onclick="selectMood(this)">😐</span>
+                    <span class="mood-emoji active" onclick="selectMood(this)">🙂</span>
+                    <span class="mood-emoji" onclick="selectMood(this)">😊</span>
+                    <span class="mood-emoji" onclick="selectMood(this)">🤩</span>
+                </div>
+            </div>
+
+            <!-- Health Dashboard -->
+            <div class="nav-card c-health" onclick="navigateTo('health.html')">
+                <div class="glow"></div>
+                <div class="card-top">
+                    <span class="nav-icon-wrap">🏃</span>
+                    <span class="card-badge">Today</span>
+                </div>
+                <div class="nav-title">Health Dashboard</div>
+                <div class="nav-desc">Fitness, nutrition & sleep monitoring</div>
+                <div class="health-rows">
+                    <div class="health-row">
+                        <div class="health-row-top">
+                            <span class="health-row-label">Fitness</span>
+                            <span class="health-row-val">7k steps</span>
+                        </div>
+                        <div class="health-bar-wrap"><div class="health-bar hb-green" style="width:0%" data-w="70%"></div></div>
+                    </div>
+                    <div class="health-row">
+                        <div class="health-row-top">
+                            <span class="health-row-label">Nutrition</span>
+                            <span class="health-row-val">tracked</span>
+                        </div>
+                        <div class="health-bar-wrap"><div class="health-bar hb-teal" style="width:0%" data-w="85%"></div></div>
+                    </div>
+                    <div class="health-row">
+                        <div class="health-row-top">
+                            <span class="health-row-label">Sleep</span>
+                            <span class="health-row-val">7h 30m</span>
+                        </div>
+                        <div class="health-bar-wrap"><div class="health-bar hb-indigo" style="width:0%" data-w="75%"></div></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="footer">SkillForge © 2026 &nbsp;·&nbsp; All systems operational</div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        function minimizeWindow() { ipcRenderer.send('window-minimize'); }
+        function maximizeWindow() { ipcRenderer.send('window-maximize'); }
+        function closeWindow()    { ipcRenderer.send('window-close'); }
+
+        // ── Magnetic glow follow cursor ──
+        const navCardGlowStates = [];
+        let navGlowFrame = 0;
+
+        function flushNavCardGlows() {
+            navGlowFrame = 0;
+            navCardGlowStates.forEach((state) => {
+                if (!state.dirty) {
+                    return;
+                }
+                state.glow.style.left = state.x + 'px';
+                state.glow.style.top = state.y + 'px';
+                state.dirty = false;
+            });
+        }
+
+        document.querySelectorAll('.nav-card').forEach((card) => {
+            const state = {
+                card,
+                glow: card.querySelector('.glow'),
+                rect: null,
+                x: 0,
+                y: 0,
+                dirty: false
+            };
+
+            const refreshRect = () => {
+                state.rect = card.getBoundingClientRect();
+            };
+
+            navCardGlowStates.push(state);
+
+            card.addEventListener('mouseenter', refreshRect);
+            card.addEventListener('mouseleave', () => {
+                state.rect = null;
+            });
+            card.addEventListener('mousemove', (event) => {
+                if (!state.rect) {
+                    refreshRect();
+                }
+
+                state.x = event.clientX - state.rect.left;
+                state.y = event.clientY - state.rect.top;
+                state.dirty = true;
+
+                if (!navGlowFrame) {
+                    navGlowFrame = requestAnimationFrame(flushNavCardGlows);
+                }
+            });
+        });
+
+        window.addEventListener('resize', () => {
+            navCardGlowStates.forEach((state) => {
+                state.rect = null;
+            });
+        });
+
+        // ── Animate bars on load ──
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.querySelectorAll('[data-w]').forEach(el => {
+                    el.style.width = el.getAttribute('data-w');
+                });
+            }, 400);
+        });
+
+        // ── Mood selector ──
+        function selectMood(el) {
+            event.stopPropagation();
+            document.querySelectorAll('.mood-emoji').forEach(e => e.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // ── Navigate ──
+        function navigateTo(page) {
+            event.currentTarget.style.transform = 'scale(0.97)';
+            setTimeout(() => window.location.href = page, 130);
+        }
+
+        function logout() {
+            localStorage.setItem('sf_force_google_account_picker', '1');
+            if (typeof firebase !== 'undefined') {
+                firebase.auth().signOut().then(() => window.location.href = 'auth-new.html');
+            } else {
+                window.location.href = 'auth-new.html';
+            }
+        }
+
+        function updateIdentity(name) {
+            const resolvedName = (name || 'Scholar').trim() || 'Scholar';
+            document.getElementById('userName').textContent = resolvedName;
+            document.getElementById('welcomeName').textContent = resolvedName;
+            document.getElementById('userAvatar').textContent = resolvedName[0].toUpperCase();
+        }
+
+        function getBestUserName(user, fallbackName = '') {
+            return fallbackName || user.displayName || (user.email ? user.email.split('@')[0] : 'Scholar');
+        }
+
+        async function syncUserProfile(user, fallbackName = '') {
+            const db = firebase.firestore();
+            const resolvedName = getBestUserName(user, fallbackName);
+
+            if (!user.displayName && resolvedName) {
+                try {
+                    await user.updateProfile({ displayName: resolvedName });
+                } catch (error) {
+                    console.error('Display name update failed:', error);
+                }
+            }
+
+            await db.collection('users').doc(user.uid).set({
+                displayName: resolvedName,
+                email: user.email || '',
+                leaderboardXp: 980,
+                courseCompletion: 68,
+                studyBalance: 68,
+                restBalance: 67,
+                sleepBalance: 52,
+                roadmapReadiness: 78,
+                focusIntensity: 72,
+                cognitiveLoad: 'Low',
+                mindDensity: 'Stretch in 12m',
+                clarityPercent: 94,
+                currentMajor: 'Advanced Cognitive Architectures',
+                currentMajorDescription: 'Exploring the intersection of neural networks and human semantic memory systems.',
+                semesterProgress: 82,
+                nextMilestone: 'Master of Architecture (+400 XP)',
+                insightCopy: 'Steady daily progress',
+                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            localStorage.setItem('sf_user_name', resolvedName);
+            localStorage.setItem('sf_user_email', user.email || '');
+            return resolvedName;
+        }
+
+        async function hydrateUserProfile(user) {
+            const cachedName = localStorage.getItem('sf_user_name') || '';
+            const queuedName = localStorage.getItem('sf_profile_seed_name') || cachedName;
+            const needsSync = localStorage.getItem('sf_profile_needs_sync') === '1';
+
+            updateIdentity(getBestUserName(user, cachedName));
+
+            if (needsSync) {
+                syncUserProfile(user, queuedName)
+                    .then((resolvedName) => {
+                        updateIdentity(resolvedName);
+                        localStorage.removeItem('sf_profile_needs_sync');
+                        localStorage.removeItem('sf_profile_seed_name');
+                    })
+                    .catch((error) => console.error('Profile sync failed after redirect:', error))
+                    ;
+                return;
+            }
+
+            try {
+                const doc = await firebase.firestore().collection('users').doc(user.uid).get();
+                if (doc.exists && doc.data().displayName) {
+                    const resolvedName = doc.data().displayName;
+                    localStorage.setItem('sf_user_name', resolvedName);
+                    updateIdentity(resolvedName);
+                }
+            } catch (error) {
+                console.error('Profile load failed:', error);
+            }
+        }
+
+        // ── Firebase user sync ──
+        function initializeNavigation() {
+            if (typeof firebase === 'undefined') return;
+            try {
+                firebase.auth().onAuthStateChanged((user) => {
+                    if (user) {
+                        const cachedName = localStorage.getItem('sf_user_name') || '';
+                        updateIdentity(getBestUserName(user, cachedName));
+                        void hydrateUserProfile(user);
+                    } else {
+                        window.location.href = 'auth-new.html';
+                    }
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeNavigation);
+        } else {
+            initializeNavigation();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillForge - Dashboard</title>
+    <link rel="stylesheet" href="window-controls.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-init.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            display: flex;
+            height: 100vh;
+            padding-top: 32px;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: white;
+            padding: 20px 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            padding: 0 20px 30px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #4f46e5;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+            font-weight: 500;
+            margin: 0 10px;
+            border-radius: 8px;
+        }
+
+        .nav-item:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(79, 70, 229, 0.1), rgba(139, 92, 246, 0.1));
+            color: #4f46e5;
+            border-left: 3px solid #4f46e5;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .search-bar {
+            flex: 1;
+            max-width: 400px;
+            margin: 0 20px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #e3f2fd;
+            border-radius: 25px;
+            font-size: 14px;
+            background: #f8f9fa;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .welcome-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .cognitive-status {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .main-card {
+            background: linear-gradient(135deg, #4f46e5, #3b82f6);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            transform: translate(30px, -30px);
+        }
+
+        .card-title {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .card-main-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .card-description {
+            opacity: 0.9;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .resume-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        .progress-text {
+            margin-top: 15px;
+            opacity: 0.9;
+        }
+
+        .side-card {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+            padding: 25px;
+            border-radius: 20px;
+        }
+
+        .side-card h3 {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .recommendation {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .skill-match {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+        }
+
+        .skill-bar {
+            width: 200px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .skill-progress {
+            height: 100%;
+            background: white;
+            width: 92%;
+            border-radius: 3px;
+        }
+
+        .schedule-btn {
+            width: 100%;
+            background: white;
+            color: #3b82f6;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        .leaderboard-card {
+            background: linear-gradient(180deg, #ffffff 0%, #eef2ff 100%);
+            border: 1px solid #dbeafe;
+        }
+        .leaderboard-full {
+            margin-top: 24px;
+            padding: 24px;
+            border-radius: 18px;
+            background: linear-gradient(180deg, #ffffff 0%, #eef2ff 100%);
+            border: 1px solid #dbeafe;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .leaderboard-full-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+        .leaderboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 18px;
+        }
+        .leaderboard-list {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 18px;
+        }
+        .leaderboard-sidepanel {
+            background: linear-gradient(135deg, #312e81, #4f46e5);
+            color: white;
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .leaderboard-sidepanel p {
+            color: rgba(255,255,255,0.82);
+            line-height: 1.6;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        .leaderboard-sidepanel .leaderboard-pill {
+            background: rgba(255,255,255,0.14);
+            color: white;
+            margin-top: 16px;
+        }
+        .leaderboard-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .leaderboard-row:last-child { border-bottom: none; }
+        .leaderboard-rank {
+            width: 34px;
+            height: 34px;
+            border-radius: 12px;
+            background: #e0e7ff;
+            color: #4338ca;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+        .leaderboard-meta {
+            flex: 1;
+        }
+        .leaderboard-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .leaderboard-copy {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .leaderboard-score {
+            font-size: 13px;
+            font-weight: 800;
+            color: #4338ca;
+        }
+        .leaderboard-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #4338ca;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        @media (max-width: 980px) {
+            .leaderboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .info-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .activity-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4f46e5;
+        }
+
+        .activity-dot.completed {
+            background: #10b981;
+        }
+
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .join-btn {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .wellness-card {
+            background: linear-gradient(135deg, #fef3f2, #fce7f3);
+            border: 1px solid #f8bbd9;
+        }
+
+        .wellness-icon {
+            width: 40px;
+            height: 40px;
+            background: #f48fb1;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .add-btn {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+
+        .skill-tags {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+
+        .skill-tag {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 10px;
+        }
+
+        /* Focus Status */
+        .focus-status-widget {
+            background: #eef2ff;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin: 0 10px 14px;
+        }
+        .focus-status-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #6366f1;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 5px;
+        }
+        .focus-status-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e1b4b;
+            margin-bottom: 8px;
+        }
+        .focus-bar {
+            width: 100%;
+            height: 5px;
+            background: #c7d2fe;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .focus-bar-fill {
+            width: 72%;
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #818cf8);
+            border-radius: 3px;
+        }
+        .scholar-id-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 12px 10px 10px;
+        }
+        .scholar-badge {
+            width: 32px;
+            height: 32px;
+            background: #6366f1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+        .scholar-id { font-size: 13px; font-weight: 700; color: #1a1a1a; }
+        .scholar-status { font-size: 11px; color: #6b7280; }
+        .study-session-btn {
+            width: calc(100% - 20px);
+            margin: 0 10px 16px;
+            padding: 11px;
+            background: #1e1b4b;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .study-session-btn:hover { background: #312e81; }
+        .sidebar-links {
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .sidebar-link {
+            font-size: 12px;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+        }
+        .sidebar-link:hover { color: #374151; }
+
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(214, 248, 241, 0.95), transparent 24%),
+                radial-gradient(circle at top right, rgba(221, 237, 255, 0.72), transparent 20%),
+                linear-gradient(180deg, #f7fbfb 0%, #edf4f4 100%);
+            color: #1f2a2e;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(141, 174, 179, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(141, 174, 179, 0.06) 1px, transparent 1px);
+            background-size: 56px 56px;
+            opacity: 0.4;
+        }
+
+        .sidebar,
+        .header,
+        .welcome-section,
+        .knowledge-section,
+        .health-logs-card,
+        .leaderboard-full,
+        .info-card,
+        .main-card,
+        .side-card {
+            background: rgba(255,255,255,0.74);
+            border: 1px solid rgba(140, 173, 179, 0.18);
+            box-shadow: 0 18px 40px rgba(112, 145, 151, 0.12);
+            backdrop-filter: blur(20px);
+        }
+
+        .sidebar {
+            background: rgba(255,255,255,0.66);
+        }
+
+        .logo,
+        .knowledge-title,
+        .focus-status-title,
+        .health-logs-title,
+        .scholar-id,
+        .welcome-title,
+        .card-main-title,
+        .info-card h3,
+        .leaderboard-score,
+        .leaderboard-name {
+            color: #203035;
+        }
+
+        .nav-item.active,
+        .focus-status-widget {
+            background: linear-gradient(135deg, rgba(176, 233, 225, 0.92), rgba(224, 245, 241, 0.95));
+            border-left: none;
+            color: #29474b;
+        }
+
+        .main-card,
+        .side-card,
+        .wellness-card,
+        .leaderboard-sidepanel {
+            color: #203035;
+        }
+
+        .resume-btn,
+        .schedule-btn,
+        .study-session-btn,
+        .add-btn,
+        .add-log-btn,
+        .toggle-btn,
+        .chat-send {
+            background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(222, 238, 236, 0.96));
+            color: #3a6267;
+            box-shadow: 0 12px 24px rgba(110, 146, 149, 0.12);
+        }
+
+        .completion-bar-fill,
+        .focus-bar-fill,
+        .skill-progress {
+            background: linear-gradient(90deg, #86c2b7, #5b8788);
+        }
+
+        .bar.study,
+        .bar.rest,
+        .bar.sleep {
+            background: linear-gradient(180deg, #d7ebec, #94bdbc);
+        }
+
+        .detail-stage {
+            margin-bottom: 28px;
+            padding: 22px;
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(244, 250, 250, 0.72));
+            border: 1px solid rgba(140, 173, 179, 0.18);
+            box-shadow: 0 24px 48px rgba(112, 145, 151, 0.13);
+            backdrop-filter: blur(24px);
+        }
+
+        .detail-stage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .detail-stage-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #203035;
+            letter-spacing: -0.03em;
+        }
+
+        .detail-stage-copy {
+            font-size: 14px;
+            color: #6b7d80;
+            margin-top: 6px;
+            line-height: 1.5;
+            max-width: 620px;
+        }
+
+        .detail-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .detail-tab {
+            min-width: 0;
+            padding: 18px 20px;
+            border: 1px solid rgba(140, 173, 179, 0.2);
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(229, 242, 240, 0.9));
+            color: #395a60;
+            text-align: left;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .detail-tab::after {
+            content: '';
+            position: absolute;
+            inset: auto -24px -30px auto;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(152, 210, 202, 0.18), transparent 70%);
+            pointer-events: none;
+        }
+
+        .detail-tab:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 26px rgba(110, 146, 149, 0.12);
+        }
+
+        .detail-tab.active {
+            background: linear-gradient(135deg, rgba(176, 233, 225, 0.98), rgba(228, 247, 243, 0.95));
+            box-shadow: 0 18px 30px rgba(110, 146, 149, 0.14);
+            border-color: rgba(104, 158, 151, 0.35);
+        }
+
+        .detail-tab-label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #6d8588;
+            margin-bottom: 6px;
+        }
+
+        .detail-tab-title {
+            display: block;
+            font-size: 20px;
+            font-weight: 800;
+            color: #203035;
+            margin-bottom: 4px;
+        }
+
+        .detail-tab-copy {
+            display: block;
+            font-size: 13px;
+            line-height: 1.45;
+            color: #6a7d80;
+        }
+
+        .tab-panel {
+            display: none !important;
+        }
+
+        .tab-panel.active {
+            display: block !important;
+        }
+
+        .tab-surface {
+            border-radius: 24px;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(140, 173, 179, 0.16);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
+        }
+
+        .main-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .leaderboard-full-head,
+        .health-logs-header,
+        .knowledge-header {
+            align-items: center;
+        }
+
+        #firebaseStatusBanner.error-banner {
+            background: rgba(255, 239, 239, 0.88);
+            color: #8d5d68;
+        }
+
+        /* Knowledge Progress & Insights */
+        .knowledge-section {
+            background: white;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+        }
+        .knowledge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .knowledge-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e1b4b;
+        }
+        .view-toggle { display: flex; gap: 8px; }
+        .toggle-btn {
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .toggle-btn.inactive { background: #f3f4f6; color: #6b7280; }
+        .toggle-btn.active   { background: #1e1b4b; color: white; }
+        .knowledge-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 28px;
+            align-items: start;
+        }
+        .completion-label, .efficiency-label, .milestones-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 10px;
+        }
+        .efficiency-label { text-align: center; }
+        .completion-percent {
+            font-size: 34px;
+            font-weight: 800;
+            color: #1e1b4b;
+            margin-bottom: 10px;
+        }
+        .completion-bar {
+            width: 100%;
+            height: 10px;
+            background: #e5e7eb;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        .completion-bar-fill {
+            width: 68%;
+            height: 100%;
+            background: #3730a3;
+            border-radius: 5px;
+        }
+        .completion-note { font-size: 13px; color: #6b7280; line-height: 1.5; }
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 14px;
+            height: 95px;
+            margin-bottom: 8px;
+        }
+        .bar-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .bar { width: 48px; border-radius: 6px 6px 0 0; }
+        .bar.study  { height: 90px; background: #3730a3; }
+        .bar.rest   { height: 58px; background: #22c55e; }
+        .bar.sleep  { height: 34px; background: #bfdbfe; }
+        .bar-label  { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .efficiency-note { font-size: 12px; color: #9ca3af; text-align: center; margin-top: 6px; }
+        .milestone-badges { display: flex; gap: 10px; margin-bottom: 12px; }
+        .milestone-badge {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .milestone-badge.blue  { background: #dbeafe; }
+        .milestone-badge.pink  { background: #fce7f3; }
+        .milestone-badge.gray  { background: #f3f4f6; }
+        .milestone-next { font-size: 12px; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.4px; }
+
+        /* Health Logs */
+        .health-logs-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+        }
+        .health-logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+        .health-logs-title { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+        .add-log-btn {
+            padding: 8px 16px;
+            background: #1e1b4b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .add-log-btn:hover { background: #312e81; }
+        .health-logs-sub { font-size: 12px; color: #9ca3af; margin-bottom: 16px; }
+        .health-log-entry {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .health-log-entry:last-child { border-bottom: none; }
+        .log-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .log-dot.blue   { background: #6366f1; }
+        .log-dot.green  { background: #22c55e; }
+        .log-dot.orange { background: #f97316; }
+        .log-dot.pulse  { background: #6366f1; animation: pulse-dot 1.5s infinite; }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.5; transform: scale(1.4); }
+        }
+        .log-text  { font-size: 13px; color: #374151; flex: 1; }
+        .log-time  { font-size: 12px; color: #9ca3af; }
+        .connecting-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 0;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        /* Chat widget */
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(99,102,241,0.35);
+            font-size: 22px;
+            z-index: 1000;
+        }
+        .chat-panel {
+            position: fixed;
+            right: 20px;
+            bottom: 90px;
+            width: 360px;
+            max-width: calc(100vw - 32px);
+            height: 540px;
+            background: rgba(255,255,255,0.98);
+            border: 1px solid rgba(99,102,241,0.12);
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 999;
+        }
+        .chat-panel.open { display: flex; }
+        .chat-header {
+            background: linear-gradient(135deg, #312e81, #4f46e5);
+            color: white;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .chat-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .chat-subtitle {
+            font-size: 12px;
+            opacity: 0.85;
+            margin-top: 4px;
+        }
+        .chat-close {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            background:
+                radial-gradient(circle at top right, rgba(99,102,241,0.08), transparent 30%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+        }
+        .chat-message {
+            max-width: 88%;
+            padding: 12px 14px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .chat-message.user {
+            margin-left: auto;
+            background: #4f46e5;
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+        .chat-message.assistant {
+            background: white;
+            color: #1f2937;
+            border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 6px;
+        }
+        .chat-status {
+            padding: 0 18px 12px;
+            font-size: 12px;
+            color: #6b7280;
+            min-height: 18px;
+            background: #eef2ff;
+        }
+        .chat-input-area {
+            padding: 14px;
+            background: #eef2ff;
+            border-top: 1px solid rgba(99,102,241,0.08);
+        }
+        .chat-input-wrap {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .chat-input {
+            flex: 1;
+            resize: none;
+            min-height: 44px;
+            max-height: 120px;
+            border: 1px solid #c7d2fe;
+            border-radius: 16px;
+            padding: 12px 14px;
+            font: inherit;
+            background: white;
+            color: #111827;
+            outline: none;
+        }
+        .chat-send {
+            border: none;
+            background: #1e1b4b;
+            color: white;
+            border-radius: 14px;
+            padding: 12px 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .chat-send:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .chat-hint {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #6b7280;
+        }
+        @media (max-width: 640px) {
+            .chat-panel {
+                left: 16px;
+                right: 16px;
+                width: auto;
+                bottom: 84px;
+                height: 68vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">
+        SkillForge - Dashboard
+    </div>
+    
+    <div class="window-controls">
+        <div class="window-control minimize" onclick="minimizeWindow()">
+            <div class="minimize-icon"></div>
+        </div>
+        <div class="window-control maximize" onclick="maximizeWindow()">
+            <div class="maximize-icon"></div>
+        </div>
+        <div class="window-control close" onclick="closeWindow()">
+            <div class="close-icon"></div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="logo">SkillForge</div>
+        <div class="nav-item" onclick="window.location.href='navigation.html'" style="cursor:pointer; display:flex; align-items:center; gap:8px; color:#6b7280;">← Back to Home</div>
+        <div class="nav-item active">STUDY DASHBOARD</div>
+
+        <div class="focus-status-widget">
+            <div class="focus-status-label">Focus Status</div>
+            <div class="focus-status-title">Deep Focus Active</div>
+            <div class="focus-bar"><div class="focus-bar-fill"></div></div>
+        </div>
+
+        <div class="scholar-id-row">
+            <div class="scholar-badge" id="scholarBadge">?</div>
+            <div>
+                <div class="scholar-id" id="scholarId">ID: SCHOLAR-2026</div>
+                <div class="scholar-status" id="scholarStatus">Status: Online</div>
+            </div>
+        </div>
+
+        <button class="study-session-btn" onclick="startStudySession()">Start Study Session</button>
+
+        <div class="sidebar-links">
+            <span class="sidebar-link">Support</span>
+            <span class="sidebar-link" id="signOutLink">Sign Out</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="search-bar">
+                <input type="text" id="dashboardSearchInput" placeholder="Search knowledge base...">
+            </div>
+            <div class="user-info">
+                <span id="userName">Scholar</span>
+                <div class="user-avatar" id="userAvatar">S</div>
+            </div>
+        </div>
+
+        <div class="welcome-section">
+            <h1 class="welcome-title">Welcome back, <span id="welcomeName">Scholar</span>.</h1>
+            <div class="cognitive-status">
+                <div class="status-item">
+                    <span>COGNITIVE LOAD</span>
+                    <div class="status-dot"></div>
+                    <span id="cognitiveLoadValue">LOW</span>
+                </div>
+                <div class="status-item">
+                    <span>MIND DENSITY</span>
+                    <span id="mindDensityValue">Stretch in 12m</span>
+                </div>
+            </div>
+            <p id="clarityText">Your cognitive clarity is at 94% today. Perfect for high-order logic.</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="main-card">
+                <div class="card-title">CURRENT MAJOR</div>
+                <div class="card-main-title" id="majorTitle">Advanced Cognitive Architectures</div>
+                <div class="card-description" id="majorDescription">
+                    Exploring the intersection of neural networks and human semantic memory systems.
+                </div>
+                <button class="resume-btn">Resume Module 5</button>
+                <div class="progress-text" id="semesterProgressText">82% of Semester Complete</div>
+            </div>
+
+            <div class="side-card">
+                <h3>Career Compass</h3>
+                <div class="recommendation">
+                    <p>Website-style roadmap is now available in the app with track-aware milestones and coach prompts.</p>
+                </div>
+                <div>
+                    <strong>NEXT CAREER MOVE</strong>
+                    <p id="careerRoadmapRole">Fullstack Product Builder</p>
+                    <p id="careerRoadmapHint">Portfolio, interview prep, and growth checkpoints</p>
+                </div>
+                <div class="skill-match">
+                    <span>Roadmap Readiness</span>
+                    <span id="roadmapReadiness">78%</span>
+                </div>
+                <div class="skill-bar">
+                    <div class="skill-progress"></div>
+                </div>
+                <div class="skill-tags">
+                    <span class="skill-tag" id="careerTagOne">PROJECTS</span>
+                    <span class="skill-tag" id="careerTagTwo">LEADERBOARD</span>
+                    <span class="skill-tag" id="careerTagThree">COACHING</span>
+                </div>
+                <button class="schedule-btn" onclick="window.location.href='career.html'">OPEN CAREER ROADMAP</button>
+            </div>
+        </div>
+
+        <div class="detail-stage">
+            <div class="detail-stage-header">
+                <div>
+                    <div class="detail-stage-title">Dashboard Deep View</div>
+                    <div class="detail-stage-copy">Switch between progress, wellness, and leaderboard without stacking sections. Only one large view stays open at a time for a cleaner dashboard.</div>
+                </div>
+            </div>
+            <div class="detail-tabs">
+                <button class="detail-tab active" data-tab-target="progressSection" aria-pressed="true">
+                    <span class="detail-tab-label">Main View</span>
+                    <span class="detail-tab-title">My Progress</span>
+                    <span class="detail-tab-copy">Completion, balance, milestones, and insight summary.</span>
+                </button>
+                <button class="detail-tab" onclick="window.location.href='health.html'">
+                    <span class="detail-tab-label">Wellness</span>
+    		    <span class="detail-tab-title">Health Dashboard</span>
+   		    <span class="detail-tab-copy">Monitor Heartbeat, SpO2, and Stress levels.</span>
+		</button>
+                <button class="detail-tab" data-tab-target="leaderboardSection" aria-pressed="false">
+                    <span class="detail-tab-label">Competition</span>
+                    <span class="detail-tab-title">Leaderboard</span>
+                    <span class="detail-tab-copy">Big ranking view for cohort momentum and XP.</span>
+                </button>
+            </div>
+
+        <!-- Knowledge Progress & Insights -->
+        <div class="knowledge-section tab-panel tab-surface active" id="progressSection">
+            <div class="knowledge-header">
+                <h2 class="knowledge-title">My Progress</h2>
+                <div class="view-toggle">
+                    <button class="toggle-btn inactive">GLOBAL VIEW</button>
+                    <button class="toggle-btn active">MONTHLY SYNC</button>
+                </div>
+            </div>
+            <div class="knowledge-grid">
+                <div>
+                    <div class="completion-label">Course Completion</div>
+                    <div class="completion-percent" id="completionPercent">68%</div>
+                    <div class="completion-bar"><div class="completion-bar-fill" id="completionBarFill"></div></div>
+                    <p class="completion-note" id="completionNote">You are 12% ahead of your cohort average. Keep this pace for early certification.</p>
+                </div>
+                <div>
+                    <div class="efficiency-label">Efficiency Balance</div>
+                    <div class="bar-chart">
+                        <div class="bar-item"><div class="bar study" id="studyBar"></div><span class="bar-label" id="studyPct">Study</span></div>
+                        <div class="bar-item"><div class="bar rest" id="restBar"></div><span class="bar-label" id="restPct">Rest</span></div>
+                        <div class="bar-item"><div class="bar sleep" id="sleepBar"></div><span class="bar-label" id="sleepPct">Sleep</span></div>
+                    </div>
+                    <p class="efficiency-note" id="efficiencyNote">Optimized ratio detected between study cycles and rest periods.</p>
+                </div>
+                <div>
+                    <div class="milestones-label">Achievement Milestones</div>
+                    <div class="milestone-badges">
+                        <div class="milestone-badge blue">🏅</div>
+                        <div class="milestone-badge pink">⭐</div>
+                        <div class="milestone-badge gray">🔒</div>
+                    </div>
+                    <div class="milestone-next" id="nextMilestone">Next: Master of Architecture (+400 XP)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Logs -->
+        <div class="health-logs-card tab-panel tab-surface" id="healthLogsSection">
+            <div class="health-logs-header">
+                <div>
+                    <div class="health-logs-title">Health Logs</div>
+                    <div class="health-logs-sub">Live sync from Firestore · Last 5 entries</div>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="add-log-btn" onclick="addHealthLog()">+ Add Log</button>
+                </div>
+            </div>
+            <div id="health-logs-list">
+                <div class="connecting-row">
+                    <div class="log-dot pulse"></div>
+                    Connecting to Firestore...
+                </div>
+            </div>
+        </div>
+
+        <div class="leaderboard-full tab-panel tab-surface" id="leaderboardSection">
+            <div class="leaderboard-full-head">
+                <div>
+                    <h3 style="font-size: 24px; color: #0f172a;">Leaderboard</h3>
+                    <p style="font-size: 14px; color: #64748b; margin-top: 6px;">Full ranking view for momentum, XP, and consistency is now anchored in the main dashboard.</p>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <div class="leaderboard-pill">Main Dashboard Section</div>
+                </div>
+            </div>
+            <div class="leaderboard-grid">
+                <div class="leaderboard-list">
+                    <div class="leaderboard-row">
+                        <div class="leaderboard-rank">#1</div>
+                        <div class="leaderboard-meta">
+                            <div class="leaderboard-name">Aarav</div>
+                            <div class="leaderboard-copy">Weekly consistency champion</div>
+                        </div>
+                        <div class="leaderboard-score">1240 XP</div>
+                    </div>
+                    <div class="leaderboard-row">
+                        <div class="leaderboard-rank">#2</div>
+                        <div class="leaderboard-meta">
+                            <div class="leaderboard-name">Meera</div>
+                            <div class="leaderboard-copy">Project sprint finisher</div>
+                        </div>
+                        <div class="leaderboard-score">1185 XP</div>
+                    </div>
+                    <div class="leaderboard-row">
+                        <div class="leaderboard-rank">#3</div>
+                        <div class="leaderboard-meta">
+                            <div class="leaderboard-name" id="leaderboardYouName">You</div>
+                            <div class="leaderboard-copy" id="leaderboardYouCopy">Climbing with steady daily progress</div>
+                        </div>
+                        <div class="leaderboard-score" id="leaderboardYouScore">980 XP</div>
+                    </div>
+                    <div class="leaderboard-row">
+                        <div class="leaderboard-rank">#4</div>
+                        <div class="leaderboard-meta">
+                            <div class="leaderboard-name">Rohan</div>
+                            <div class="leaderboard-copy">High quiz accuracy this week</div>
+                        </div>
+                        <div class="leaderboard-score">940 XP</div>
+                    </div>
+                    <div class="leaderboard-row">
+                        <div class="leaderboard-rank">#5</div>
+                        <div class="leaderboard-meta">
+                            <div class="leaderboard-name">Nisha</div>
+                            <div class="leaderboard-copy">Strong streak across electives</div>
+                        </div>
+                        <div class="leaderboard-score">905 XP</div>
+                    </div>
+                </div>
+                <div class="leaderboard-sidepanel">
+                    <h3 style="font-size: 20px;">Your Dashboard Rank</h3>
+                    <p>The leaderboard now lives fully inside the main dashboard so progress, roadmap readiness, and competition stay in one view.</p>
+                    <div style="margin-top: 18px; font-size: 34px; font-weight: 800;" id="leaderboardPanelRank">#3</div>
+                    <p id="leaderboardPanelCopy">You are close to the top tier. Finish one more high-value task to climb further.</p>
+                    <div class="leaderboard-pill">XP synced with dashboard progress</div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <div class="bottom-grid">
+            <div class="info-card">
+                <h3>Recent Activities</h3>
+                <div id="recentActivitiesList">
+                    <div class="activity-item">
+                        <div class="activity-dot completed"></div>
+                        <div>
+                            <div>Completed Module 4 Quiz</div>
+                            <div style="font-size: 12px; color: #666;">Score: 98/100 • 2 hours ago</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-dot completed"></div>
+                        <div>
+                            <div>Read Research Paper</div>
+                            <div style="font-size: 12px; color: #666;">Neural plasticity in AI • 5 hours ago</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-card wellness-card">
+                <div class="wellness-icon">💪</div>
+                <h3>SESSION WELLNESS CHECK</h3>
+                <p id="wellnessSummary">You've been in deep focus for 98 minutes. Your cortical stress is rising.</p>
+                <button class="add-btn">5-minute Mindful Stretch</button>
+                <div style="margin-top: 15px;">
+                    <strong>Health Logs</strong>
+                    <p style="font-size: 12px; color: #666;" id="healthSyncNote">Live sync from Firebase • Last 5 entries</p>
+                </div>
+            </div>
+        </div>
+        <div id="firebaseStatusBanner" style="margin-top:16px; padding:14px 16px; border-radius:16px; background:rgba(255,255,255,0.82); color:#5f7174; font-size:13px; border:1px solid rgba(140,173,179,0.18);">Connecting dashboard to Firebase...</div>
+    </div>
+
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+            <div>
+                <div class="chat-title">SkillForge AI</div>
+                <div class="chat-subtitle">Powered by Gemini 2.5 Flash</div>
+            </div>
+            <button class="chat-close" id="chatCloseBtn" aria-label="Close chat">x</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-message assistant">Ask about study plans, concepts, revision help, or your next learning step.</div>
+        </div>
+        <div class="chat-status" id="chatStatus">Ready.</div>
+        <div class="chat-input-area">
+            <div class="chat-input-wrap">
+                <textarea class="chat-input" id="chatInput" placeholder="Message SkillForge AI..."></textarea>
+                <button class="chat-send" id="chatSendBtn">Send</button>
+            </div>
+            <div class="chat-hint">Press Enter to send. Shift+Enter adds a new line.</div>
+        </div>
+    </div>
+
+    <button class="chat-widget" id="chatToggleBtn" aria-label="Open chat">Chat</button>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const chatHistory = [];
+        let chatRequestInFlight = false;
+        
+        function minimizeWindow() {
+            ipcRenderer.send('window-minimize');
+        }
+        
+        function maximizeWindow() {
+            ipcRenderer.send('window-maximize');
+        }
+        
+        function closeWindow() {
+            ipcRenderer.send('window-close');
+        }
+
+        function toggleChat(forceOpen) {
+            const panel = document.getElementById('chatPanel');
+            const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !panel.classList.contains('open');
+            panel.classList.toggle('open', shouldOpen);
+
+            if (shouldOpen) {
+                document.getElementById('chatInput').focus();
+            }
+        }
+
+        function setChatStatus(message) {
+            document.getElementById('chatStatus').textContent = message;
+        }
+
+        function renderChatMessage(role, text) {
+            const container = document.getElementById('chatMessages');
+            const bubble = document.createElement('div');
+            bubble.className = `chat-message ${role}`;
+            bubble.textContent = text;
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            if (chatRequestInFlight) return;
+
+            const input = document.getElementById('chatInput');
+            const sendButton = document.getElementById('chatSendBtn');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            renderChatMessage('user', message);
+            input.value = '';
+            input.style.height = '44px';
+            setChatStatus('Gemini is thinking...');
+            chatRequestInFlight = true;
+            sendButton.disabled = true;
+
+            try {
+                const result = await ipcRenderer.invoke('gemini-chat', {
+                    message,
+                    history: chatHistory
+                });
+
+                chatHistory.push({ role: 'user', text: message });
+                chatHistory.push({ role: 'assistant', text: result.text });
+                renderChatMessage('assistant', result.text);
+                setChatStatus('Ready.');
+            } catch (error) {
+                console.error('Gemini chat error:', error);
+                renderChatMessage('assistant', `I could not reach Gemini right now. ${error.message}`);
+                setChatStatus('Check GEMINI_API_KEY or your network connection.');
+            } finally {
+                chatRequestInFlight = false;
+                sendButton.disabled = false;
+                input.focus();
+            }
+        }
+        
+        const fallbackActivities = [
+            { title: 'Completed Module 4 Quiz', detail: 'Score: 98/100 • 2 hours ago' },
+            { title: 'Read Research Paper', detail: 'Neural plasticity in AI • 5 hours ago' }
+        ];
+        const fallbackHealthLogs = [
+            { color: 'green', text: 'Drank 2L water', time: '2h ago' },
+            { color: 'blue', text: '30 min walk completed', time: '5h ago' },
+            { color: 'orange', text: 'Skipped breakfast', time: '8h ago' },
+            { color: 'green', text: '8 hrs sleep logged', time: '1d ago' },
+            { color: 'blue', text: 'Meditation - 10 min', time: '1d ago' }
+        ];
+        const fallbackLeaderboard = [
+            { name: 'Aarav', copy: 'Weekly consistency champion', xp: 1240 },
+            { name: 'Meera', copy: 'Project sprint finisher', xp: 1185 },
+            { name: 'You', copy: 'Climbing with steady daily progress', xp: 980 },
+            { name: 'Rohan', copy: 'High quiz accuracy this week', xp: 940 },
+            { name: 'Nisha', copy: 'Strong streak across electives', xp: 905 }
+        ];
+        let dashboardDb = null;
+        let dashboardAuth = null;
+        let currentUid = null;
+        let healthLogsUnsubscribe = null;
+        let leaderboardUnsubscribe = null;
+        let userUnsubscribe = null;
+        let activeDashboardUserName = 'You';
+
+        function updateFirebaseBanner(message, isError = false) {
+            const banner = document.getElementById('firebaseStatusBanner');
+            banner.textContent = message;
+            banner.classList.toggle('error-banner', isError);
+        }
+
+        function setDetailTab(sectionId) {
+            document.querySelectorAll('.tab-panel').forEach((panel) => {
+                const isActive = panel.id === sectionId;
+                panel.classList.toggle('active', isActive);
+                panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+            });
+
+            document.querySelectorAll('.detail-tab').forEach((button) => {
+                const isActive = button.dataset.tabTarget === sectionId;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        }
+
+        function attachTabHandlers() {
+            document.querySelectorAll('[data-tab-target]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    setDetailTab(button.dataset.tabTarget);
+                });
+            });
+        }
+
+        function formatTime(value) {
+            if (!value) return 'Just now';
+            const dateValue = typeof value.toDate === 'function' ? value.toDate() : new Date(value);
+            if (Number.isNaN(dateValue.getTime())) return 'Just now';
+            const minutes = Math.max(1, Math.round((Date.now() - dateValue.getTime()) / 60000));
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.round(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            return `${Math.round(hours / 24)}d ago`;
+        }
+
+        function renderActivities(activities) {
+            const list = document.getElementById('recentActivitiesList');
+            list.innerHTML = activities.map((activity) => `
+                <div class="activity-item">
+                    <div class="activity-dot completed"></div>
+                    <div>
+                        <div>${activity.title}</div>
+                        <div style="font-size: 12px; color: #666;">${activity.detail}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderHealthLogs(logs) {
+            const list = document.getElementById('health-logs-list');
+            list.innerHTML = logs.map((log) =>
+                `<div class="health-log-entry"><div class="log-dot ${log.color}"></div><span class="log-text">${log.text}</span><span class="log-time">${log.time}</span></div>`
+            ).join('');
+            document.getElementById('healthSyncNote').textContent = `Live sync from Firebase • Last ${logs.length} entries`;
+            document.getElementById('wellnessSummary').textContent = logs.some((log) => log.text.toLowerCase().includes('sleep'))
+                ? 'Your recovery rhythm looks stronger today. Keep the focus blocks balanced with breaks.'
+                : 'You have been in deep focus for 98 minutes. Your cortical stress is rising.';
+        }
+
+        function renderLeaderboard(entries, displayName) {
+            activeDashboardUserName = displayName || activeDashboardUserName;
+            const list = document.querySelector('.leaderboard-list');
+            const normalized = entries.length ? entries : fallbackLeaderboard;
+            list.innerHTML = normalized.map((entry, index) => `
+                <div class="leaderboard-row">
+                    <div class="leaderboard-rank">#${index + 1}</div>
+                    <div class="leaderboard-meta">
+                        <div class="leaderboard-name"${entry.name === displayName ? ' id="leaderboardYouName"' : ''}>${entry.name}</div>
+                        <div class="leaderboard-copy">${entry.copy}</div>
+                    </div>
+                    <div class="leaderboard-score">${entry.xp} XP</div>
+                </div>
+            `).join('');
+
+            const currentIndex = normalized.findIndex((entry) => entry.name === displayName);
+            const rank = currentIndex >= 0 ? currentIndex + 1 : 3;
+            document.getElementById('leaderboardPanelRank').textContent = `#${rank}`;
+            document.getElementById('leaderboardPanelCopy').textContent = rank === 1
+                ? 'You are leading the cohort right now. Keep your streak alive.'
+                : 'You are close to the top tier. Finish one more high-value task to climb further.';
+        }
+
+        function applyProgress(data) {
+            const completion = data.courseCompletion || 68;
+            const study = data.studyBalance || 68;
+            const rest = data.restBalance || 67;
+            const sleep = data.sleepBalance || 52;
+            const roadmap = data.roadmapReadiness || 78;
+            const focusIntensity = data.focusIntensity || 72;
+
+            document.getElementById('cognitiveLoadValue').textContent = (data.cognitiveLoad || 'LOW').toUpperCase();
+            document.getElementById('mindDensityValue').textContent = data.mindDensity || 'Stretch in 12m';
+            document.getElementById('clarityText').textContent = `Your cognitive clarity is at ${data.clarityPercent || 94}% today. Perfect for high-order logic.`;
+            document.getElementById('majorTitle').textContent = data.currentMajor || 'Advanced Cognitive Architectures';
+            document.getElementById('majorDescription').textContent = data.currentMajorDescription || 'Exploring the intersection of neural networks and human semantic memory systems.';
+            document.getElementById('semesterProgressText').textContent = `${data.semesterProgress || 82}% of Semester Complete`;
+            document.getElementById('completionPercent').textContent = `${completion}%`;
+            document.getElementById('completionBarFill').style.width = `${completion}%`;
+            document.getElementById('completionNote').textContent = completion >= 70
+                ? 'You are ahead of your cohort average. Keep this pace for early certification.'
+                : 'Your pace is building well. Keep stacking small wins to accelerate completion.';
+            document.getElementById('studyBar').style.height = `${Math.max(24, study)}px`;
+            document.getElementById('restBar').style.height = `${Math.max(24, rest)}px`;
+            document.getElementById('sleepBar').style.height = `${Math.max(24, sleep)}px`;
+            document.getElementById('studyPct').textContent = `Study ${study}%`;
+            document.getElementById('restPct').textContent = `Rest ${rest}%`;
+            document.getElementById('sleepPct').textContent = `Sleep ${sleep}%`;
+            document.getElementById('efficiencyNote').textContent = 'Optimized ratio detected between study cycles and rest periods.';
+            document.getElementById('nextMilestone').textContent = `Next: ${data.nextMilestone || 'Master of Architecture (+400 XP)'}`;
+            document.getElementById('roadmapReadiness').textContent = `${roadmap}%`;
+            document.querySelector('.skill-progress').style.width = `${roadmap}%`;
+            document.querySelector('.focus-bar-fill').style.width = `${focusIntensity}%`;
+        }
+
+        async function addHealthLog() {
+            const entry = prompt('Enter health log (e.g. "Drank 2L water, 30min walk"):');
+            if (!entry) return;
+
+            if (!dashboardDb || !currentUid) {
+                const optimistic = [{ color: 'green', text: entry, time: 'Just now' }, ...fallbackHealthLogs].slice(0, 5);
+                renderHealthLogs(optimistic);
+                updateFirebaseBanner('Health log saved locally until Firebase reconnects.', true);
+                return;
+            }
+
+            try {
+                await dashboardDb.collection('users').doc(currentUid).collection('healthLogs').add({
+                    text: entry,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (error) {
+                console.error('Error writing health log:', error);
+                updateFirebaseBanner('Health log write failed. Check Firestore permissions.', true);
+            }
+        }
+        window.addHealthLog = addHealthLog;
+
+        function attachButtonHandlers() {
+            document.querySelector('.resume-btn')?.addEventListener('click', () => {
+                alert('Resuming Module 5...');
+            });
+            document.querySelector('.schedule-btn')?.addEventListener('click', () => {
+                window.location.href = 'career.html';
+            });
+            document.querySelector('.add-btn')?.addEventListener('click', () => {
+                alert('Starting mindful stretch session...');
+            });
+        }
+
+        function attachDashboardSearch() {
+            const input = document.getElementById('dashboardSearchInput');
+            if (!input) return;
+
+            const searchMap = [
+                { keywords: ['leaderboard', 'rank', 'xp', 'cohort'], action: () => setDetailTab('leaderboardSection') },
+                { keywords: ['health', 'wellness', 'log', 'sleep', 'water'], action: () => setDetailTab('healthLogsSection') },
+                { keywords: ['progress', 'milestone', 'completion', 'study'], action: () => setDetailTab('progressSection') },
+                { keywords: ['career', 'roadmap', 'job'], action: () => { window.location.href = 'career.html'; } },
+                { keywords: ['learning', 'hub', 'course', 'backpack'], action: () => { window.location.href = 'learning/student_dashboard.html'; } },
+                { keywords: ['python', 'test', 'exam', 'assessment'], action: () => { window.location.href = 'learning/pythonhub.html'; } }
+            ];
+
+            input.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') return;
+
+                const query = input.value.trim().toLowerCase();
+                if (!query) return;
+
+                const match = searchMap.find((entry) => entry.keywords.some((keyword) => query.includes(keyword)));
+                if (match) {
+                    match.action();
+                    return;
+                }
+
+                updateFirebaseBanner(`No direct dashboard match for "${input.value}". Try leaderboard, health, progress, learning hub, career, or python.`, true);
+            });
+        }
+
+        function subscribeToHealthLogs(uid) {
+            healthLogsUnsubscribe = dashboardDb.collection('users').doc(uid).collection('healthLogs')
+                .orderBy('createdAt', 'desc')
+                .limit(5)
+                .onSnapshot(async (snapshot) => {
+                    if (snapshot.empty) {
+                        renderHealthLogs(fallbackHealthLogs);
+                        return;
+                    }
+
+                    renderHealthLogs(snapshot.docs.map((doc) => ({
+                        color: doc.data().text?.toLowerCase().includes('water') || doc.data().text?.toLowerCase().includes('sleep') ? 'green' : 'blue',
+                        text: doc.data().text || 'Health update',
+                        time: formatTime(doc.data().createdAt)
+                    })));
+                }, (error) => {
+                    console.error('Health log sync failed:', error);
+                    renderHealthLogs(fallbackHealthLogs);
+                });
+        }
+
+        function subscribeToLeaderboard(displayName) {
+            if (typeof leaderboardUnsubscribe === 'function') {
+                leaderboardUnsubscribe();
+            }
+
+            leaderboardUnsubscribe = dashboardDb.collection('users')
+                .orderBy('leaderboardXp', 'desc')
+                .limit(5)
+                .onSnapshot((snapshot) => {
+                    if (snapshot.empty) {
+                        renderLeaderboard(fallbackLeaderboard, displayName);
+                        return;
+                    }
+
+                    const entries = snapshot.docs.map((doc) => ({
+                        name: doc.data().displayName || 'Scholar',
+                        copy: doc.data().insightCopy || 'Steady daily progress',
+                        xp: doc.data().leaderboardXp || 0
+                    }));
+
+                    renderLeaderboard(entries, displayName);
+                }, (error) => {
+                    console.error('Leaderboard sync failed:', error);
+                    renderLeaderboard(fallbackLeaderboard, displayName);
+                });
+        }
+
+        function subscribeToUserProfile(user) {
+            const authDisplayName = user.displayName || (user.email ? user.email.split('@')[0] : 'Scholar');
+            const authInitial = authDisplayName.charAt(0).toUpperCase();
+            activeDashboardUserName = authDisplayName;
+
+            document.getElementById('userName').textContent = authDisplayName;
+            document.getElementById('welcomeName').textContent = authDisplayName;
+            document.getElementById('userAvatar').textContent = authInitial;
+            document.getElementById('scholarBadge').textContent = authInitial;
+            document.getElementById('scholarStatus').textContent = 'Status: Online';
+
+            userUnsubscribe = dashboardDb.collection('users').doc(user.uid).onSnapshot(async (snapshot) => {
+                const userData = snapshot.exists ? snapshot.data() : {};
+                const displayName = userData.displayName || user.displayName || user.email.split('@')[0];
+                const scholarId = userData.scholarId || `SCHOLAR-${user.uid.substring(0, 6).toUpperCase()}-2026`;
+
+                document.getElementById('userName').textContent = displayName;
+                document.getElementById('welcomeName').textContent = displayName;
+                document.getElementById('userAvatar').textContent = displayName[0].toUpperCase();
+                document.getElementById('scholarBadge').textContent = displayName[0].toUpperCase();
+                document.getElementById('scholarId').textContent = `ID: ${scholarId}`;
+                document.getElementById('scholarStatus').textContent = 'Status: Online';
+
+                applyProgress(userData);
+                renderActivities(Array.isArray(userData.activities) && userData.activities.length ? userData.activities : fallbackActivities);
+
+                if (!snapshot.exists) {
+                    await dashboardDb.collection('users').doc(user.uid).set({
+                        displayName,
+                        scholarId,
+                        leaderboardXp: 980,
+                        courseCompletion: 68,
+                        studyBalance: 68,
+                        restBalance: 67,
+                        sleepBalance: 52,
+                        roadmapReadiness: 78,
+                        focusIntensity: 72,
+                        cognitiveLoad: 'Low',
+                        mindDensity: 'Stretch in 12m',
+                        clarityPercent: 94,
+                        currentMajor: 'Advanced Cognitive Architectures',
+                        currentMajorDescription: 'Exploring the intersection of neural networks and human semantic memory systems.',
+                        semesterProgress: 82,
+                        nextMilestone: 'Master of Architecture (+400 XP)',
+                        activities: fallbackActivities,
+                        insightCopy: 'Steady daily progress',
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                }
+            }, (error) => {
+                console.error('User profile sync failed:', error);
+                updateFirebaseBanner('Signed in successfully. Firestore profile access is limited, so showing auth profile data.', true);
+            });
+        }
+
+        function cleanupListeners() {
+            [healthLogsUnsubscribe, leaderboardUnsubscribe, userUnsubscribe].forEach((unsubscribe) => {
+                if (typeof unsubscribe === 'function') unsubscribe();
+            });
+        }
+
+        function initializeDashboard() {
+            attachTabHandlers();
+            attachButtonHandlers();
+            attachDashboardSearch();
+            renderActivities(fallbackActivities);
+            renderHealthLogs(fallbackHealthLogs);
+            renderLeaderboard(fallbackLeaderboard, 'You');
+            applyProgress({});
+
+            if (typeof firebase === 'undefined') {
+                console.error('Firebase not loaded');
+                updateFirebaseBanner('Firebase did not load. Showing dashboard preview data.', true);
+                return;
+            }
+
+            dashboardAuth = firebase.auth();
+            dashboardDb = firebase.firestore();
+
+            dashboardAuth.onAuthStateChanged((user) => {
+                cleanupListeners();
+
+                if (!user) {
+                    updateFirebaseBanner('No signed-in user found. Sign in to enable dashboard sync.', true);
+                    return;
+                }
+
+                currentUid = user.uid;
+                updateFirebaseBanner(`Firebase connected for ${user.email || 'current scholar'}.`);
+                subscribeToUserProfile(user);
+                subscribeToHealthLogs(user.uid);
+                subscribeToLeaderboard(activeDashboardUserName);
+            }, (error) => {
+                console.error('Auth listener failed:', error);
+                updateFirebaseBanner('Firebase auth listener failed. Showing preview data.', true);
+            });
+        }
+
+        // Make functions global
+        window.minimizeWindow = minimizeWindow;
+        window.maximizeWindow = maximizeWindow;
+        window.closeWindow = closeWindow;
+
+        document.getElementById('chatToggleBtn').addEventListener('click', () => toggleChat());
+        document.getElementById('chatCloseBtn').addEventListener('click', () => toggleChat(false));
+        document.getElementById('chatSendBtn').addEventListener('click', sendChatMessage);
+        document.getElementById('chatInput').addEventListener('input', function() {
+            this.style.height = '44px';
+            this.style.height = `${Math.min(this.scrollHeight, 120)}px`;
+        });
+        document.getElementById('chatInput').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        });
+
+        // Focus Status / Sign Out
+        document.getElementById('signOutLink').addEventListener('click', async () => {
+            try {
+                await dashboardAuth?.signOut();
+            } catch (error) {
+                console.error('Sign-out failed:', error);
+            }
+            window.location.href = 'auth-new.html';
+        });
+
+        function startStudySession() {
+            alert('Study session started! 🎯 Focus mode activated.');
+        }
+        window.startStudySession = startStudySession;
+
+        // Toggle view buttons
+        document.querySelectorAll('.view-toggle .toggle-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.view-toggle .toggle-btn').forEach(b => { b.classList.remove('active'); b.classList.add('inactive'); });
+                this.classList.remove('inactive');
+                this.classList.add('active');
+            });
+        });
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            initializeDashboard();
+        });
+    </script>
+</body>
+</html>

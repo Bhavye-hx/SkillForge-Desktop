@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SkillForge Assessment Environment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; user-select: none; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .blur-bg { filter: blur(5px); pointer-events: none; }
+        #cameraBox { position: fixed; bottom: 16px; right: 16px; width: 200px; z-index: 999; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 2px solid #1e293b; background: #000; }
+        #cameraBox video { width: 100%; height: 150px; display: block; transform: scaleX(-1); object-fit: cover; }
+        #cameraBox canvas { position: absolute; top: 0; left: 0; width: 100%; height: 150px; transform: scaleX(-1); pointer-events: none; }
+        #camStatus { position: absolute; top: 6px; left: 8px; font-size: 10px; font-weight: 700; color: white; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
+        #camAlert { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(239,68,68,0.92); color: white; font-size: 10px; font-weight: 700; text-align: center; padding: 5px 4px; display: none; z-index: 2; }
+    </style>
+</head>
+<body class="bg-slate-50 h-screen overflow-hidden" oncontextmenu="return false;">
+
+    <!-- 1. RULES OVERLAY (Initial State) -->
+    <div id="rulesOverlay" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4">
+        <div class="bg-white max-w-2xl w-full rounded-2xl shadow-2xl overflow-hidden">
+            <div class="bg-indigo-600 p-6 text-center">
+                <h1 class="text-2xl font-bold text-white">Assessment Rules</h1>
+                <p class="text-indigo-200 text-sm">Please read carefully before proceeding</p>
+            </div>
+            <div class="p-8 space-y-6">
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4">
+                        <div class="bg-red-100 p-2 rounded-lg text-red-600"><i data-lucide="maximize" class="w-6 h-6"></i></div>
+                        <div><h3 class="font-bold text-slate-800">Fullscreen Mandatory</h3><p class="text-sm text-slate-500">The test will run in fullscreen mode. Exiting fullscreen will flag a violation.</p></div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="bg-red-100 p-2 rounded-lg text-red-600"><i data-lucide="eye-off" class="w-6 h-6"></i></div>
+                        <div><h3 class="font-bold text-slate-800">No Tab Switching</h3><p class="text-sm text-slate-500">Switching tabs or minimizing the window is strictly prohibited.</p></div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="bg-red-100 p-2 rounded-lg text-red-600"><i data-lucide="clipboard-x" class="w-6 h-6"></i></div>
+                        <div><h3 class="font-bold text-slate-800">Clipboard Disabled</h3><p class="text-sm text-slate-500">Copy, Paste, and Right-click functions are disabled.</p></div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="bg-red-100 p-2 rounded-lg text-red-600"><i data-lucide="camera" class="w-6 h-6"></i></div>
+                        <div><h3 class="font-bold text-slate-800">Camera Proctoring Active</h3><p class="text-sm text-slate-500">Your camera will monitor for multiple faces or mobile devices. Keep your face visible at all times.</p></div>
+                    </div>
+                </div>
+                
+                <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex items-center gap-3">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600"></i>
+                    <p class="text-xs text-yellow-700 font-bold">Warning: 3 Violations will result in immediate termination.</p>
+                </div>
+
+                <button onclick="startTest()" class="w-full py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition flex items-center justify-center gap-2">
+                    I Accept & Start Test <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. VIOLATION MODAL (Hidden) -->
+    <div id="violationModal" class="hidden fixed inset-0 z-[60] bg-red-900/90 flex items-center justify-center">
+        <div class="bg-white rounded-2xl p-8 max-w-md text-center shadow-2xl">
+            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <i data-lucide="alert-octagon" class="w-10 h-10 text-red-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Security Violation!</h2>
+            <p class="text-slate-600 mb-6">You left the test environment. This has been recorded.</p>
+            <div class="text-xs font-bold uppercase tracking-widest text-red-500 mb-2">Attempts Remaining</div>
+            <div class="flex justify-center gap-2 mb-6">
+                <div id="life1" class="w-4 h-4 rounded-full bg-red-500"></div>
+                <div id="life2" class="w-4 h-4 rounded-full bg-red-500"></div>
+                <div id="life3" class="w-4 h-4 rounded-full bg-red-500"></div>
+            </div>
+            <button onclick="resumeTest()" class="w-full py-3 bg-slate-900 text-white rounded-lg font-bold">Resume Test</button>
+        </div>
+    </div>
+
+    <!-- 3. TEST INTERFACE -->
+    <div id="testInterface" class="h-full flex flex-col blur-bg transition-all duration-300">
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-8 shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                <span class="text-sm font-bold text-red-600 uppercase tracking-wider">Proctored Mode</span>
+            </div>
+            <div class="font-mono text-xl font-bold text-slate-800" id="timer">00:00:00</div>
+            <button onclick="submitTest()" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Submit</button>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Question Side -->
+            <div class="w-1/2 p-8 overflow-y-auto border-r border-slate-200 bg-white">
+                <span class="text-xs font-bold text-slate-400 uppercase mb-2 block">Problem Statement</span>
+                <h1 class="text-2xl font-bold text-slate-900 mb-6" id="questionText">Loading Question...</h1>
+                
+                <div id="mcqContainer" class="hidden space-y-4"></div>
+                
+                <div id="codingSpecs" class="hidden">
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <h4 class="font-bold text-slate-700 mb-2 text-sm">Test Cases</h4>
+                        <div id="testCasesDisplay" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Answer Side -->
+            <div class="w-1/2 bg-slate-50 p-8 flex flex-col">
+                <span class="text-xs font-bold text-slate-400 uppercase mb-2 block">Your Solution</span>
+                
+                <!-- Code Editor -->
+                <div id="codeEditor" class="hidden flex-1 flex flex-col rounded-xl overflow-hidden border border-slate-300 shadow-sm">
+                    <div class="bg-slate-800 text-slate-400 px-4 py-2 text-xs font-mono flex justify-between">
+                        <span>main.c</span>
+                        <span>C Language</span>
+                    </div>
+                    <textarea class="flex-1 bg-slate-900 text-green-400 p-4 font-mono text-sm outline-none resize-none" spellcheck="false">
+#include <stdio.h>
+
+int main() {
+    // Write your code here
+    return 0;
+}
+                    </textarea>
+                </div>
+
+                <!-- MCQ Placeholder -->
+                <div id="mcqPlaceholder" class="hidden flex-1 flex items-center justify-center text-slate-400 italic">
+                    Select an option from the left to answer.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- face-api.js for face detection -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <!-- Camera Box -->
+    <div id="cameraBox">
+        <video id="camVideo" autoplay muted playsinline></video>
+        <canvas id="camCanvas"></canvas>
+        <div id="camStatus">● CAM</div>
+        <div id="camAlert"></div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        const { ipcRenderer } = require('electron');
+        let violations = 0;
+        const maxViolations = 3;
+        let questionData = null;
+        let timerInterval;
+        let seconds = 0;
+        let testStarted = false;
+        let detectionInterval = null;
+
+        // --- CAMERA & FACE DETECTION ---
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 320, height: 240, facingMode: 'user' } 
+                });
+                const video = document.getElementById('camVideo');
+                video.srcObject = stream;
+
+                video.onloadedmetadata = async () => {
+                    await video.play();
+                    const canvas = document.getElementById('camCanvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+
+                    document.getElementById('camStatus').textContent = '\u25cf Loading AI...';
+
+                    // Load model
+                    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+
+                    document.getElementById('camStatus').textContent = '\u25cf LIVE';
+                    document.getElementById('camStatus').style.background = 'rgba(34,197,94,0.7)';
+
+                    // Start detection loop only after model is ready
+                    detectionInterval = setInterval(() => runDetection(video), 2500);
+                };
+            } catch (err) {
+                document.getElementById('camStatus').textContent = '\u25cf NO CAM';
+                document.getElementById('camStatus').style.background = 'rgba(239,68,68,0.7)';
+                console.warn('Camera error:', err);
+            }
+        }
+
+        async function runDetection(video) {
+            if (!testStarted || video.readyState < 2) return;
+            try {
+                const detections = await faceapi.detectAllFaces(
+                    video,
+                    new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.35 })
+                );
+
+                const canvas = document.getElementById('camCanvas');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (detections.length === 0) {
+                    showCamAlert('\u26a0 NO FACE DETECTED');
+                    triggerViolation();
+                } else if (detections.length > 1) {
+                    showCamAlert('\u26a0 MULTIPLE FACES');
+                    triggerViolation();
+                    // Draw red boxes for all faces
+                    detections.forEach(d => {
+                        ctx.strokeStyle = '#ef4444';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(d.box.x, d.box.y, d.box.width, d.box.height);
+                    });
+                } else {
+                    // Single face — green box
+                    const box = detections[0].box;
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+                }
+            } catch(e) { console.warn('Detection error:', e); }
+        }
+
+        function showCamAlert(msg) {
+            const el = document.getElementById('camAlert');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 3000);
+        }
+
+        // --- INIT ---
+        window.onload = function() {
+            const storedData = localStorage.getItem('activeTestQuestion');
+            if(!storedData) {
+                alert("No question data found. Returning.");
+                window.location.href = 'pythonhub.html';
+                return;
+            }
+            questionData = JSON.parse(storedData);
+            renderQuestion();
+        };
+
+        function renderQuestion() {
+            document.getElementById('questionText').innerText = questionData.text;
+            if(questionData.type === 'code') {
+                document.getElementById('codingSpecs').classList.remove('hidden');
+                document.getElementById('codeEditor').classList.remove('hidden');
+                const tcContainer = document.getElementById('testCasesDisplay');
+                if(questionData.testCases) {
+                    questionData.testCases.forEach(tc => {
+                        tcContainer.innerHTML += `<div class="text-xs font-mono bg-white border border-slate-200 p-2 rounded"><span class="text-slate-500">Input:</span> ${tc.input} <br><span class="text-slate-500">Output:</span> ${tc.output}</div>`;
+                    });
+                }
+            } else {
+                const mcqDiv = document.getElementById('mcqContainer');
+                mcqDiv.classList.remove('hidden');
+                document.getElementById('mcqPlaceholder').classList.remove('hidden');
+                questionData.options.forEach((opt, idx) => {
+                    mcqDiv.innerHTML += `<label class="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition"><input type="radio" name="ans" value="${idx}" class="w-5 h-5 accent-indigo-600"><span class="text-slate-700 font-medium">${opt}</span></label>`;
+                });
+            }
+        }
+
+        // --- SECURITY LOGIC ---
+        function startTest() {
+            testStarted = true;
+            ipcRenderer.send('enter-fullscreen');
+            document.getElementById('rulesOverlay').style.display = 'none';
+            document.getElementById('testInterface').classList.remove('blur-bg');
+            startTimer();
+            startCamera();
+
+            // Visibility change (tab switch / minimize)
+            document.addEventListener('visibilitychange', () => {
+                if (testStarted && document.hidden) triggerViolation();
+            });
+
+            // Fullscreen exit via Electron event
+            ipcRenderer.on('fullscreen-left', () => {
+                if (testStarted) triggerViolation();
+            });
+
+            // Disable copy/paste/devtools keys
+            document.addEventListener('keydown', e => {
+                if ((e.ctrlKey || e.metaKey) && ['c','v','u'].includes(e.key)) e.preventDefault();
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) e.preventDefault();
+                if (e.key === 'Escape') e.preventDefault(); // block ESC exiting fullscreen
+            });
+        }
+
+        function triggerViolation() {
+            violations++;
+            const lifeId = `life${maxViolations + 1 - violations}`;
+            const lifeEl = document.getElementById(lifeId);
+            if (lifeEl) lifeEl.classList.replace('bg-red-500', 'bg-slate-200');
+
+            const modal = document.getElementById('violationModal');
+            modal.classList.remove('hidden');
+
+            if (violations >= maxViolations) {
+                modal.querySelector('h2').innerText = 'Test Terminated';
+                modal.querySelector('p').innerText = 'Maximum violations exceeded. Submitting automatically.';
+                modal.querySelector('button').style.display = 'none';
+                setTimeout(submitTest, 2000);
+            }
+        }
+
+        function resumeTest() {
+            if (violations < maxViolations) {
+                ipcRenderer.send('enter-fullscreen');
+                document.getElementById('violationModal').classList.add('hidden');
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                seconds++;
+                const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+                const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+            }, 1000);
+        }
+
+        function submitTest() {
+            testStarted = false;
+            clearInterval(timerInterval);
+            if (detectionInterval) clearInterval(detectionInterval);
+            const video = document.getElementById('camVideo');
+            if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+            ipcRenderer.send('exit-fullscreen');
+            alert('Test Submitted Successfully!');
+            window.location.href = 'pythonhub.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "skillforge-app",
+  "version": "1.0.0",
+  "description": "SkillForge Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0"
+  },
+  "dependencies": {
+    "firebase": "^10.14.1"
+  }
+}

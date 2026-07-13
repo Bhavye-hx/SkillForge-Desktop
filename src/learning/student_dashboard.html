@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillForge - Student Hub</title>
+    <link rel="stylesheet" href="../window-controls.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            overflow: hidden; 
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,0) 0, hsla(253,16%,7%,0) 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,0) 0, hsla(225,39%,30%,0) 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,0) 0, hsla(339,49%,30%,0) 50%);
+        }
+        
+        .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05); }
+        .glass-sidebar { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border-right: 1px solid rgba(255, 255, 255, 0.5); }
+        .sidebar-active { background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
+
+        .parallax-blob { position: fixed; filter: blur(90px); opacity: 0.3; z-index: -1; }
+        .animate-slow { opacity: 0; animation: fadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        .card-enter { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+        
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Track Highlight Effects */
+        .track-core-card { border: 2px solid #6366f1 !important; box-shadow: 0 0 25px rgba(99, 102, 241, 0.2); }
+        .track-tag { background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%); animation: pulse-subtle 2s infinite; }
+        @keyframes pulse-subtle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.9; transform: scale(0.98); } }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; }
+        
+        #toastContainer { z-index: 9999 !important; } 
+        .modal-overlay { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-active { opacity: 1 !important; pointer-events: auto !important; }
+        .modal-content-active { transform: scale(1) !important; }
+        .btn-gradient { background: linear-gradient(135deg, #0f172a 0%, #334155 100%); }
+        .chat-widget {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            width: 58px;
+            height: 58px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4338ca, #6366f1);
+            color: white;
+            font-weight: 800;
+            box-shadow: 0 16px 34px rgba(79, 70, 229, 0.32);
+            cursor: pointer;
+            z-index: 80;
+        }
+        .chat-panel {
+            position: fixed;
+            right: 24px;
+            bottom: 94px;
+            width: 360px;
+            max-width: calc(100vw - 32px);
+            height: 540px;
+            background: rgba(255,255,255,0.97);
+            border: 1px solid rgba(99,102,241,0.14);
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 79;
+        }
+        .chat-panel.open { display: flex; }
+        .chat-header {
+            background: linear-gradient(135deg, #312e81, #4f46e5);
+            color: white;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .chat-title { font-size: 16px; font-weight: 700; }
+        .chat-subtitle { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+        .chat-close {
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.16);
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            background:
+                radial-gradient(circle at top right, rgba(99,102,241,0.08), transparent 30%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+        }
+        .chat-message {
+            max-width: 88%;
+            padding: 12px 14px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .chat-message.user {
+            margin-left: auto;
+            background: #4f46e5;
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+        .chat-message.assistant {
+            background: white;
+            color: #1f2937;
+            border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 6px;
+        }
+        .chat-status {
+            padding: 0 18px 12px;
+            font-size: 12px;
+            color: #6b7280;
+            min-height: 18px;
+            background: #eef2ff;
+        }
+        .chat-input-area {
+            padding: 14px;
+            background: #eef2ff;
+            border-top: 1px solid rgba(99,102,241,0.08);
+        }
+        .chat-input-wrap {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .chat-input {
+            flex: 1;
+            resize: none;
+            min-height: 44px;
+            max-height: 120px;
+            border: 1px solid #c7d2fe;
+            border-radius: 16px;
+            padding: 12px 14px;
+            font: inherit;
+            background: white;
+            color: #111827;
+            outline: none;
+        }
+        .chat-send {
+            border: none;
+            background: #1e1b4b;
+            color: white;
+            border-radius: 14px;
+            padding: 12px 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .chat-send:disabled { opacity: 0.6; cursor: not-allowed; }
+        .chat-hint { margin-top: 8px; font-size: 11px; color: #6b7280; }
+        .coach-card {
+            background: linear-gradient(135deg, rgba(49, 46, 129, 0.96), rgba(79, 70, 229, 0.92));
+            color: white;
+            border: 1px solid rgba(129, 140, 248, 0.4);
+            box-shadow: 0 20px 40px rgba(79, 70, 229, 0.18);
+        }
+        .coach-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.14);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .action-card {
+            background: rgba(255,255,255,0.76);
+            border: 1px solid rgba(255,255,255,0.84);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 18px 32px rgba(148, 163, 184, 0.12);
+        }
+        @media (max-width: 640px) {
+            .chat-panel {
+                left: 16px;
+                right: 16px;
+                width: auto;
+                bottom: 84px;
+                height: 68vh;
+            }
+        }
+    </style>
+</head>
+<body class="h-screen flex relative selection:bg-indigo-100 selection:text-indigo-900 text-slate-600">
+
+    <div class="titlebar">SkillForge - Learning Hub</div>
+    <div class="window-controls">
+        <div class="window-control minimize" onclick="minimizeWindow()"><div class="minimize-icon"></div></div>
+        <div class="window-control maximize" onclick="maximizeWindow()"><div class="maximize-icon"></div></div>
+        <div class="window-control close" onclick="closeWindow()"><div class="close-icon"></div></div>
+    </div>
+
+    <div id="blob1" class="parallax-blob bg-indigo-300 w-[700px] h-[700px] rounded-full top-[-300px] left-[-200px]" data-speed="0.15"></div>
+    <div id="blob2" class="parallax-blob bg-purple-200 w-[600px] h-[600px] rounded-full bottom-[-200px] right-[-100px]" data-speed="0.10"></div>
+    
+    <div id="toastContainer" class="fixed top-6 right-6 flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- LOGOUT MODAL -->
+    <div id="logoutModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/20 backdrop-blur-sm opacity-0 pointer-events-none">
+        <div id="logoutModalContent" class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 transform scale-95 border border-white/60 text-center">
+            <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mb-4 text-red-500 mx-auto"><i data-lucide="log-out" class="w-7 h-7"></i></div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2">Sign Out?</h3>
+            <div class="flex w-full gap-3 mt-6">
+                <button onclick="closeLogoutModal()" class="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors">Cancel</button>
+                <button onclick="confirmLogout()" class="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl shadow-lg transition-colors">Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUCCESS MODAL -->
+    <div id="successModal" class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/20 backdrop-blur-sm opacity-0 pointer-events-none">
+        <div id="successModalContent" class="bg-white rounded-[2rem] p-8 shadow-2xl w-full max-w-sm transform scale-90 border border-white/60 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-green-50 to-transparent -z-10"></div>
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-green-100 shadow-xl animate-[bounce_1s_ease-in-out_1]">
+                <i data-lucide="check" class="w-10 h-10 text-green-600 stroke-[3]"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Enrolled Successfully!</h2>
+            <p class="text-slate-500 text-sm mb-8">Courses have been added to your profile. Your backpack is now empty.</p>
+            <button onclick="closeSuccessModal()" class="w-full py-3.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all">Start Learning</button>
+        </div>
+    </div>
+
+    <aside class="animate-slow hidden md:flex flex-col w-72 h-[96%] m-3 rounded-2xl glass-sidebar shadow-2xl shadow-indigo-100/50 z-20 sticky top-3">
+        <div class="h-24 flex items-center px-8">
+            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl mr-3 shadow-lg shadow-indigo-200"><i data-lucide="zap" class="h-5 w-5 text-white"></i></div>
+            <span class="text-2xl font-bold text-slate-900">SkillForge</span>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+            <p class="px-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Menu</p>
+            <a href="../navigation.html" class="flex items-center px-5 py-3.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-all"><i data-lucide="arrow-left" class="w-5 h-5 mr-3"></i> Back to Command Centre</a>
+            <a href="#" class="sidebar-active flex items-center px-5 py-3.5 text-sm font-semibold rounded-xl transition-all"><i data-lucide="layout-grid" class="w-5 h-5 mr-3"></i> Learning Hub</a>
+            <a href="college_courses.html" class="flex items-center px-5 py-3.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-all"><i data-lucide="book-open" class="w-5 h-5 mr-3"></i> College Courses</a>
+        </nav>
+        <div class="p-6">
+            <div class="glass-panel p-4 rounded-xl border border-white mb-4">
+                <div class="flex items-center justify-between mb-2">
+                     <span class="text-xs font-bold text-slate-800">Storage</span>
+                     <i id="syncIcon" data-lucide="cloud" class="w-4 h-4 text-green-500"></i>
+                </div>
+                <p class="text-[10px] text-slate-400" id="lastSavedTime">Synced</p>
+            </div>
+            <button onclick="openLogoutModal()" class="flex items-center justify-center w-full px-4 py-3 text-sm font-semibold text-red-500 hover:bg-red-50 rounded-xl transition-colors"><i data-lucide="log-out" class="w-4 h-4 mr-2"></i> Sign Out</button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden relative z-10" id="mainContainer">
+        <header class="animate-slow delay-1 h-24 flex items-center justify-between px-10 z-10 sticky top-0 shrink-0">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Welcome, <span id="userName" class="text-indigo-600">Student</span></h2>
+                <div class="flex items-center gap-2">
+                    <span id="userTrackDisplay" class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded uppercase tracking-wider">General Track</span>
+                    <p class="text-xs text-slate-400 font-medium">B.Tech Computer Science</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-5">
+                <button onclick="toggleBackpack()" class="relative p-3 bg-white/60 backdrop-blur-md border border-white rounded-full hover:bg-white hover:shadow-lg transition-all">
+                    <i data-lucide="backpack" class="w-5 h-5 text-slate-600 hover:text-indigo-600"></i>
+                    <span id="backpackBadge" class="absolute top-0 right-0 h-5 w-5 bg-gradient-to-r from-red-500 to-pink-500 border-2 border-white rounded-full text-[10px] flex items-center justify-center text-white font-bold opacity-0 transition-all scale-0">0</span>
+                </button>
+                <div class="h-11 w-11 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">S</div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto px-10 pb-10 relative" id="scrollArea">
+            
+            <div class="grid lg:grid-cols-3 gap-6 mb-12 animate-slow delay-2">
+                <div class="lg:col-span-2 glass-panel p-8 rounded-[2rem] relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity"><i data-lucide="graduation-cap" class="w-32 h-32 text-indigo-900"></i></div>
+                    <div class="relative z-10">
+                        <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Master Your <span id="trackNameHero" class="text-indigo-600">Curriculum</span></h1>
+                        <p id="userTrackHero" class="text-slate-500 mb-8 max-w-lg text-lg">Personalizing your elective journey based on your career goals.</p>
+                        
+                        <!-- STATS GRID -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div class="bg-white/50 p-4 rounded-2xl border border-white/60"><p class="text-[10px] font-bold text-indigo-500 uppercase mb-1">Credits</p><p class="text-2xl font-bold text-slate-800" id="creditCount">0</p></div>
+                            <div class="bg-white/50 p-4 rounded-2xl border border-white/60"><p class="text-[10px] font-bold text-purple-500 uppercase mb-1">Enrolled</p><p class="text-2xl font-bold text-slate-800" id="enrolledCount">0</p></div>
+                            <div class="bg-white/50 p-4 rounded-2xl border border-white/60"><p class="text-[10px] font-bold text-blue-500 uppercase mb-1">Track Progress</p><p class="text-2xl font-bold text-slate-800" id="trackProgressDisplay">0%</p></div>
+                            <div class="bg-white/50 p-4 rounded-2xl border border-white/60"><p class="text-[10px] font-bold text-emerald-500 uppercase mb-1">Left</p><p class="text-2xl font-bold text-emerald-600" id="creditsLeftDisplay">25</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-panel p-6 rounded-[2rem] flex flex-col items-center justify-center relative">
+                    <div class="absolute top-4 left-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Skill Footprint</div>
+                    <div class="w-full h-48 mt-4"><canvas id="skillRadar"></canvas></div>
+                </div>
+            </div>
+
+            <div class="mb-10 animate-slow delay-3">
+                <div class="coach-card rounded-[2rem] p-7 relative overflow-hidden">
+                    <div class="coach-chip"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Career Coach</div>
+                    <h3 class="text-2xl font-extrabold mt-5">Turn your learning hub into a career sprint</h3>
+                    <p class="text-indigo-100/90 mt-3 max-w-2xl leading-7">Ask for roadmap guidance, interview prep, project ideas, or a two-week plan based on your current track and enrolled courses.</p>
+                    <div class="flex flex-wrap gap-3 mt-6">
+                        <button onclick="openCareerCoach()" class="px-5 py-3 rounded-xl bg-white text-indigo-700 font-bold shadow-lg hover:bg-indigo-50 transition-all">Open Career Coach</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="catalog-container" class="space-y-12 pb-24 animate-slow delay-4">
+                <div class="text-center py-20"><i data-lucide="loader-2" class="w-8 h-8 text-indigo-600 animate-spin mx-auto"></i></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- BACKPACK DRAWER -->
+    <div id="backpackDrawer" class="fixed inset-y-0 right-0 w-[400px] bg-white/90 backdrop-blur-2xl shadow-2xl transform translate-x-full transition-transform duration-500 z-[60] flex flex-col border-l border-white/50">
+        <div class="p-6 pt-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+            <div><h2 class="text-xl font-bold text-slate-900">My Backpack</h2><p class="text-xs text-slate-500 mt-1">Review selected courses</p></div>
+            <button onclick="toggleBackpack()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:text-slate-700"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 space-y-4" id="backpackList"></div>
+        <div class="p-6 border-t border-slate-100 bg-white/50">
+            <div class="flex justify-between items-end mb-6"><span class="text-sm font-medium text-slate-500">Cart Total Credits</span><span class="text-3xl font-bold text-slate-900 leading-none" id="totalCreditsCart">0</span></div>
+            <button onclick="checkout()" class="w-full py-4 btn-gradient text-white font-bold rounded-xl transition-all flex justify-center gap-2 items-center group relative overflow-hidden">
+                <span class="relative z-10">Confirm Enrollment</span><i data-lucide="arrow-right" class="w-4 h-4 mt-0.5 transition-transform group-hover:translate-x-1 relative z-10"></i>
+            </button>
+        </div>
+    </div>
+    <!-- PYTHON LEVEL MODAL -->
+<div id="pythonLevelModal" class="modal-overlay fixed inset-0 z-[110] hidden items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
+    <div class="glass-panel max-w-xl w-full rounded-[2.5rem] p-10 shadow-2xl animate-slow">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-slate-900">Assess Your Level</h2>
+            <p class="text-slate-500 mt-2">We will customize the curriculum and arena based on your choice.</p>
+        </div>
+
+        <div class="grid gap-4 mb-8">
+            <!-- Beginner -->
+            <button onclick="selectPythonLevel('Beginner')" class="flex items-center gap-4 p-5 rounded-2xl border-2 border-slate-100 bg-white hover:border-indigo-500 hover:bg-indigo-50 transition-all group text-left">
+                <div class="p-3 bg-green-100 text-green-600 rounded-xl group-hover:scale-110 transition-transform"><i data-lucide="leaf"></i></div>
+                <div><h4 class="font-bold text-slate-800">Beginner</h4><p class="text-xs text-slate-500">New to coding. Focus on syntax and basic logic.</p></div>
+            </button>
+            <!-- Intermediate -->
+            <button onclick="selectPythonLevel('Intermediate')" class="flex items-center gap-4 p-5 rounded-2xl border-2 border-slate-100 bg-white hover:border-indigo-500 hover:bg-indigo-50 transition-all group text-left">
+                <div class="p-3 bg-blue-100 text-blue-600 rounded-xl group-hover:scale-110 transition-transform"><i data-lucide="zap"></i></div>
+                <div><h4 class="font-bold text-slate-800">Intermediate</h4><p class="text-xs text-slate-500">Know the basics. Focus on Data Structures & Algorithms.</p></div>
+            </button>
+            <!-- Advanced -->
+            <button onclick="selectPythonLevel('Advanced')" class="flex items-center gap-4 p-5 rounded-2xl border-2 border-slate-100 bg-white hover:border-indigo-500 hover:bg-indigo-50 transition-all group text-left">
+                <div class="p-3 bg-purple-100 text-purple-600 rounded-xl group-hover:scale-110 transition-transform"><i data-lucide="crown"></i></div>
+                <div><h4 class="font-bold text-slate-800">Advanced</h4><p class="text-xs text-slate-500">Experienced. Focus on OOP, APIs, and Optimization.</p></div>
+            </button>
+        </div>
+        <button onclick="document.getElementById('pythonLevelModal').classList.add('hidden')" class="w-full text-slate-400 text-sm font-medium hover:text-slate-600">Cancel</button>
+    </div>
+</div>
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+            <div>
+                <div class="chat-title">Career Coach</div>
+                <div class="chat-subtitle">Roadmap, interviews, projects, and learning strategy</div>
+            </div>
+            <button class="chat-close" id="chatCloseBtn" aria-label="Close chat">x</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-message assistant">I can help with course choices, study plans, roadmap steps, interview prep, and portfolio ideas.</div>
+        </div>
+        <div class="chat-status" id="chatStatus">Ready.</div>
+        <div class="chat-input-area">
+            <div class="chat-input-wrap">
+                <textarea class="chat-input" id="chatInput" placeholder="Ask your career coach about roadmap steps, projects, or interview prep..."></textarea>
+                <button class="chat-send" id="chatSendBtn">Send</button>
+            </div>
+            <div class="chat-hint">Press Enter to send. Shift+Enter adds a new line.</div>
+        </div>
+    </div>
+    <button class="chat-widget" id="chatToggleBtn" aria-label="Open chat">CC</button>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        lucide.createIcons();
+
+        // ipcRenderer for window controls
+        const { ipcRenderer } = require('electron');
+        const chatHistory = [];
+        let chatRequestInFlight = false;
+        function minimizeWindow() { ipcRenderer.send('window-minimize'); }
+        function maximizeWindow() { ipcRenderer.send('window-maximize'); }
+        function closeWindow() { ipcRenderer.send('window-close'); }
+        window.minimizeWindow = minimizeWindow;
+        window.maximizeWindow = maximizeWindow;
+        window.closeWindow = closeWindow;
+
+        function toggleChat(forceOpen) {
+            const panel = document.getElementById('chatPanel');
+            const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !panel.classList.contains('open');
+            panel.classList.toggle('open', shouldOpen);
+            if (shouldOpen) document.getElementById('chatInput').focus();
+        }
+
+        function openCareerCoach(prefill) {
+            toggleChat(true);
+            const input = document.getElementById('chatInput');
+            if (prefill) input.value = prefill;
+            input.focus();
+        }
+
+        function setChatStatus(message) {
+            document.getElementById('chatStatus').textContent = message;
+        }
+
+        function renderChatMessage(role, text) {
+            const container = document.getElementById('chatMessages');
+            const bubble = document.createElement('div');
+            bubble.className = `chat-message ${role}`;
+            bubble.textContent = text;
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            if (chatRequestInFlight) return;
+
+            const input = document.getElementById('chatInput');
+            const sendButton = document.getElementById('chatSendBtn');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            renderChatMessage('user', message);
+            input.value = '';
+            input.style.height = '44px';
+            setChatStatus('Gemini is thinking...');
+            chatRequestInFlight = true;
+            sendButton.disabled = true;
+
+            try {
+                const result = await ipcRenderer.invoke('gemini-chat', {
+                    message,
+                    history: chatHistory
+                });
+
+                chatHistory.push({ role: 'user', text: message });
+                chatHistory.push({ role: 'assistant', text: result.text });
+                renderChatMessage('assistant', result.text);
+                setChatStatus('Ready.');
+            } catch (error) {
+                console.error('Gemini chat error:', error);
+                renderChatMessage('assistant', `I could not reach Gemini right now. ${error.message}`);
+                setChatStatus('Check GEMINI_API_KEY or your network connection.');
+            } finally {
+                chatRequestInFlight = false;
+                sendButton.disabled = false;
+                input.focus();
+            }
+        }
+
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAaoUIwYSTO_JibEJ-Qf8SleuwcUMWibFs",
+            authDomain: "skillforge-1c07c.firebaseapp.com",
+            projectId: "skillforge-1c07c",
+            storageBucket: "skillforge-1c07c.firebasestorage.app",
+            messagingSenderId: "246800623841",
+            appId: "1:246800623841:web:67994cb0a958ca292defa0",
+            measurementId: "G-HET9CWW79Z"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let myBackpack = [];      
+        let enrolledCourses = []; 
+        let allCourses = [];
+        let radarChart = null;
+        let userTrack = "";
+        const MAX_CREDITS = 25;
+        let iconsRenderQueued = false;
+
+        const trackMapping = {
+            "AI & Machine Learning": "AI & Data",
+            "Fullstack Development": "Web Dev",
+            "Cybersecurity": "Cloud & Sec",
+            "Data Science": "AI & Data"
+        };
+
+        function queueLucideRefresh() {
+            if (iconsRenderQueued) return;
+            iconsRenderQueued = true;
+            requestAnimationFrame(() => {
+                lucide.createIcons();
+                iconsRenderQueued = false;
+            });
+        }
+
+        function renderCourseCatalog() {
+            const container = document.getElementById('catalog-container');
+            if (!container) return;
+            container.innerHTML = "";
+            const categories = ["Coding Languages", "Core CS", "Web Dev", "AI & Data", "Cloud & Sec"];
+
+            categories.forEach(cat => {
+                const catCourses = allCourses.filter(c => c.category === cat);
+                if (catCourses.length === 0) return;
+
+                catCourses.sort((a, b) => {
+                    const aIsCore = trackMapping[userTrack] === a.category;
+                    const bIsCore = trackMapping[userTrack] === b.category;
+                    return bIsCore - aIsCore;
+                });
+
+                const section = document.createElement('div');
+                section.className = "card-enter";
+                section.innerHTML = `<div class="flex items-center gap-4 mb-6 mt-10"><h3 class="text-lg font-bold text-slate-800">${cat}</h3><div class="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent"></div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 grid-area"></div>`;
+
+                const grid = section.querySelector('.grid-area');
+                catCourses.forEach((c, idx) => {
+                    grid.innerHTML += createCardHTML(c, idx);
+                });
+                container.appendChild(section);
+            });
+
+            queueLucideRefresh();
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            try {
+                if (user) {
+                    document.getElementById('userName').innerText = (user.displayName || user.email.split('@')[0]);
+                    
+                    try {
+                        const studentDoc = await db.collection('students').doc(user.email).get();
+                        if(studentDoc.exists) {
+                            const data = studentDoc.data();
+                            userTrack = data.track || "";
+                            if(userTrack) {
+                                if(document.getElementById('userTrackDisplay')) document.getElementById('userTrackDisplay').innerText = userTrack;
+                                if(document.getElementById('trackNameHero')) document.getElementById('trackNameHero').innerText = userTrack;
+                                if(document.getElementById('userTrackHero')) document.getElementById('userTrackHero').innerText = `We have prioritized courses essential for your ${userTrack} specialization.`;
+                            }
+                        }
+                    } catch (studentError) {
+                        console.warn('Student profile read failed, continuing with auth profile:', studentError);
+                    }
+
+                    await seedCSECourses(); 
+                    await loadUserEnrolledCourses(user.email); 
+                    await loadCourses(); 
+                } else {
+                    const guestEmail = localStorage.getItem('sf_user_email') || 'guest@skillforge.app';
+                    const guestName = localStorage.getItem('sf_user_name') || guestEmail.split('@')[0];
+                    document.getElementById('userName').innerText = guestName;
+                    await seedCSECourses();
+                    await loadUserEnrolledCourses(guestEmail);
+                    await loadCourses();
+                }
+            } catch (error) {
+                console.error('Learning hub init failed, using fallback rendering:', error);
+                document.getElementById('userName').innerText = localStorage.getItem('sf_user_name') || 'Scholar';
+                allCourses = [
+                    { id: 'fallback-python', title: 'Python Masterclass', category: 'Coding Languages', credits: 3, image: 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=400', color: 'rose' },
+                    { id: 'fallback-java', title: 'Java Programming', category: 'Coding Languages', credits: 3, image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400', color: 'rose' },
+                    { id: 'fallback-cpp', title: 'Modern C++', category: 'Coding Languages', credits: 3, image: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=400', color: 'rose' },
+                    { id: 'fallback-js', title: 'JavaScript Essentials', category: 'Coding Languages', credits: 2, image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400', color: 'rose' },
+                    { id: 'fallback-dsa', title: 'Data Structures', category: 'Core CS', credits: 4, image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400', color: 'indigo' },
+                    { id: 'fallback-os', title: 'Operating Systems', category: 'Core CS', credits: 4, image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400', color: 'indigo' },
+                    { id: 'fallback-dbms', title: 'Database Systems', category: 'Core CS', credits: 3, image: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=400', color: 'indigo' },
+                    { id: 'fallback-mern', title: 'MERN Stack', category: 'Web Dev', credits: 3, image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400', color: 'purple' },
+                    { id: 'fallback-react', title: 'React Frontend Lab', category: 'Web Dev', credits: 3, image: 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=400', color: 'purple' },
+                    { id: 'fallback-node', title: 'Node.js APIs', category: 'Web Dev', credits: 3, image: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400', color: 'purple' },
+                    { id: 'fallback-dl', title: 'Deep Learning', category: 'AI & Data', credits: 4, image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400', color: 'indigo' },
+                    { id: 'fallback-ml', title: 'Machine Learning Foundations', category: 'AI & Data', credits: 4, image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400', color: 'indigo' },
+                    { id: 'fallback-data', title: 'Data Analytics with Python', category: 'AI & Data', credits: 3, image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400', color: 'indigo' },
+                    { id: 'fallback-eth', title: 'Ethical Hacking', category: 'Cloud & Sec', credits: 3, image: 'https://images.unsplash.com/photo-1614064548237-096f735f344f?w=600', color: 'orange' },
+                    { id: 'fallback-cloud', title: 'Cloud Fundamentals', category: 'Cloud & Sec', credits: 3, image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400', color: 'orange' },
+                    { id: 'fallback-devops', title: 'DevOps Foundations', category: 'Cloud & Sec', credits: 3, image: 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=400', color: 'orange' }
+                ];
+                loadCourses();
+            }
+        });
+
+        async function seedCSECourses() {
+            try {
+                const snapshot = await db.collection('cse_courses').limit(1).get();
+                if (!snapshot.empty) return;
+                const courses = [
+                    { title: "Python Masterclass", category: "Coding Languages", credits: 3, image: "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=400", color: "rose" },
+                    { title: "Java Programming", category: "Coding Languages", credits: 3, image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400", color: "rose" },
+                    { title: "Modern C++", category: "Coding Languages", credits: 3, image: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=400", color: "rose" },
+                    { title: "JavaScript Essentials", category: "Coding Languages", credits: 2, image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400", color: "rose" },
+                    { title: "MERN Stack", category: "Web Dev", credits: 3, image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400", color: "purple" },
+                    { title: "React Frontend Lab", category: "Web Dev", credits: 3, image: "https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=400", color: "purple" },
+                    { title: "Node.js APIs", category: "Web Dev", credits: 3, image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400", color: "purple" },
+                    { title: "Data Structures", category: "Core CS", credits: 4, image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400", color: "indigo" },
+                    { title: "Operating Systems", category: "Core CS", credits: 4, image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400", color: "indigo" },
+                    { title: "Database Systems", category: "Core CS", credits: 3, image: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=400", color: "indigo" },
+                    { title: "Ethical Hacking", category: "Cloud & Sec", credits: 3, image: "https://images.unsplash.com/photo-1614064548237-096f735f344f?w=600", color: "orange" },
+                    { title: "Cloud Fundamentals", category: "Cloud & Sec", credits: 3, image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400", color: "orange" },
+                    { title: "DevOps Foundations", category: "Cloud & Sec", credits: 3, image: "https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=400", color: "orange" },
+                    { title: "Deep Learning", category: "AI & Data", credits: 4, image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400", color: "indigo" },
+                    { title: "Machine Learning Foundations", category: "AI & Data", credits: 4, image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400", color: "indigo" },
+                    { title: "Data Analytics with Python", category: "AI & Data", credits: 3, image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400", color: "indigo" }
+                ];
+                let batch = db.batch(); 
+                courses.forEach(c => { let ref = db.collection('cse_courses').doc(); batch.set(ref, c); }); 
+                await batch.commit();
+            } catch (error) {
+                console.warn('Could not seed courses from Firestore:', error);
+            }
+        }
+
+        async function loadCourses(forceReload = false) {
+            try {
+                if (forceReload || !allCourses.length) {
+                    const snapshot = await db.collection('cse_courses').get();
+                    const uniqueMap = new Map();
+                    snapshot.docs.forEach(doc => {
+                        const d = doc.data();
+                        if(!uniqueMap.has(d.title)) uniqueMap.set(d.title, { id: doc.id, ...d });
+                    });
+                    allCourses = Array.from(uniqueMap.values());
+                }
+
+                renderCourseCatalog();
+                updateChart();
+            } catch (e) {
+                console.error("Error loading courses:", e);
+                if (!allCourses.length) {
+                    allCourses = [
+                        { id: 'fallback-python', title: 'Python Masterclass', category: 'Coding Languages', credits: 3, image: 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=400', color: 'rose' },
+                        { id: 'fallback-java', title: 'Java Programming', category: 'Coding Languages', credits: 3, image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400', color: 'rose' },
+                        { id: 'fallback-cpp', title: 'Modern C++', category: 'Coding Languages', credits: 3, image: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=400', color: 'rose' },
+                        { id: 'fallback-js', title: 'JavaScript Essentials', category: 'Coding Languages', credits: 2, image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400', color: 'rose' },
+                        { id: 'fallback-dsa', title: 'Data Structures', category: 'Core CS', credits: 4, image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400', color: 'indigo' },
+                        { id: 'fallback-os', title: 'Operating Systems', category: 'Core CS', credits: 4, image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400', color: 'indigo' },
+                        { id: 'fallback-dbms', title: 'Database Systems', category: 'Core CS', credits: 3, image: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=400', color: 'indigo' },
+                        { id: 'fallback-mern', title: 'MERN Stack', category: 'Web Dev', credits: 3, image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400', color: 'purple' },
+                        { id: 'fallback-react', title: 'React Frontend Lab', category: 'Web Dev', credits: 3, image: 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=400', color: 'purple' },
+                        { id: 'fallback-node', title: 'Node.js APIs', category: 'Web Dev', credits: 3, image: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400', color: 'purple' },
+                        { id: 'fallback-dl', title: 'Deep Learning', category: 'AI & Data', credits: 4, image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400', color: 'indigo' },
+                        { id: 'fallback-ml', title: 'Machine Learning Foundations', category: 'AI & Data', credits: 4, image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400', color: 'indigo' },
+                        { id: 'fallback-data', title: 'Data Analytics with Python', category: 'AI & Data', credits: 3, image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400', color: 'indigo' },
+                        { id: 'fallback-eth', title: 'Ethical Hacking', category: 'Cloud & Sec', credits: 3, image: 'https://images.unsplash.com/photo-1614064548237-096f735f344f?w=600', color: 'orange' },
+                        { id: 'fallback-cloud', title: 'Cloud Fundamentals', category: 'Cloud & Sec', credits: 3, image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400', color: 'orange' },
+                        { id: 'fallback-devops', title: 'DevOps Foundations', category: 'Cloud & Sec', credits: 3, image: 'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=400', color: 'orange' }
+                    ];
+                }
+
+                renderCourseCatalog();
+                updateChart();
+            }
+        }
+
+        function createCardHTML(c, delay) {
+            let colorText = c.color === 'rose' ? 'text-rose-600 bg-rose-50' : 'text-indigo-600 bg-indigo-50';
+            const isOwned = enrolledCourses.some(item => item.id === c.id);
+            const inCart = myBackpack.some(item => item.id === c.id);
+            const isCore = trackMapping[userTrack] === c.category;
+            
+            const coreClass = isCore ? 'track-core-card' : '';
+            const coreBadge = isCore ? `
+                <div class="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full track-tag text-white text-[9px] font-black uppercase tracking-tighter">
+                    <i data-lucide="star" class="w-3 h-3 fill-white"></i> Track Essential
+                </div>` : '';
+
+            let btnHTML = "";
+            if (isOwned) {
+                btnHTML = `<button onclick="python()" class="w-full py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"><i data-lucide="play-circle" class="w-4 h-4 mr-1.5"></i> Start Learning</button>`;
+            } else if (inCart) {
+                btnHTML = `<button onclick="toggleCourse('${c.id}')" class="w-full py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center bg-emerald-100 text-emerald-700 border border-emerald-200"><i data-lucide="check" class="w-4 h-4 mr-1.5"></i> In Backpack</button>`;
+            } else {
+                btnHTML = `<button id="btn-${c.id}" onclick="toggleCourse('${c.id}')" class="w-full py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center bg-slate-900 text-white hover:bg-slate-800">Add to Backpack</button>`;
+            }
+
+            return `
+                <div class="card-enter group bg-white rounded-2xl border border-white/60 shadow-lg overflow-hidden hover:-translate-y-2 transition-all duration-500 relative ${coreClass}" style="animation-delay: ${delay * 0.05}s">
+                    ${coreBadge}
+                    <div class="h-40 overflow-hidden relative bg-slate-100">
+                        <img src="${c.image}" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                        <div class="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 shadow-sm border border-white/50">${c.credits} Credits</div>
+                    </div>
+                    <div class="p-5 relative">
+                        <div class="absolute -top-3 left-5"><span class="${colorText} px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border border-white shadow-sm">${c.category}</span></div>
+                        <h4 class="font-bold text-slate-900 mb-4 mt-2 text-lg leading-tight line-clamp-1">${c.title}</h4>
+                        ${btnHTML}
+                    </div>
+                </div>`;
+        }
+
+        async function loadUserEnrolledCourses(email) {
+            try {
+                const doc = await db.collection('students').doc(email).get();
+                if(doc.exists && doc.data().enrolledElectives) {
+                    enrolledCourses = doc.data().enrolledElectives;
+                }
+            } catch (error) {
+                console.warn('Could not load enrolled courses:', error);
+                const localCourses = localStorage.getItem(`sf_enrolled_courses_${email}`);
+                enrolledCourses = localCourses ? JSON.parse(localCourses) : [];
+            }
+            updateUI();
+        }
+
+        function toggleCourse(id) {
+            if (enrolledCourses.some(e => e.id === id)) return;
+            const course = allCourses.find(c => c.id === id);
+            const index = myBackpack.findIndex(c => c.id === id);
+            if (index > -1) { 
+                myBackpack.splice(index, 1); 
+                showToast(`Removed ${course.title}`, 'remove'); 
+            } else { 
+                myBackpack.push(course); 
+                showToast(`Added ${course.title}`, 'success'); 
+            }
+            updateUI();
+            renderCourseCatalog();
+        }
+
+        async function checkout() {
+            if(myBackpack.length === 0) return showToast("Select a course first!", "info");
+            const user = firebase.auth().currentUser;
+            const email = user ? user.email : (localStorage.getItem('sf_user_email') || 'guest@skillforge.app');
+            const mergedMap = new Map();
+            [...enrolledCourses, ...myBackpack].forEach((course) => {
+                if (course && course.id) mergedMap.set(course.id, course);
+            });
+            const newEnrolledList = Array.from(mergedMap.values());
+
+            try {
+                await db.collection('students').doc(email).set({
+                    enrolledElectives: newEnrolledList,
+                    lastUpdated: new Date().toISOString()
+                }, { merge: true });
+            } catch (error) {
+                console.warn('Enrollment sync failed, saving locally instead:', error);
+                localStorage.setItem(`sf_enrolled_courses_${email}`, JSON.stringify(newEnrolledList));
+                showToast('Enrollment saved locally. Firestore sync is limited right now.', 'info');
+            }
+
+            enrolledCourses = newEnrolledList;
+            myBackpack = [];
+            renderCourseCatalog();
+            document.getElementById('successModal').classList.add('modal-active');
+            updateUI();
+        }
+
+        function updateUI() {
+            const safeSetText = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+
+            safeSetText('backpackBadge', myBackpack.length);
+            const badge = document.getElementById('backpackBadge');
+            if(badge) {
+                badge.style.opacity = myBackpack.length > 0 ? 1 : 0;
+                badge.style.transform = myBackpack.length > 0 ? 'scale(1)' : 'scale(0)';
+            }
+            
+            const ownedCredits = enrolledCourses.reduce((sum, c) => sum + (c.credits || 0), 0);
+            const cartCredits = myBackpack.reduce((sum, c) => sum + (c.credits || 0), 0);
+            const total = ownedCredits + cartCredits;
+            
+            safeSetText('creditCount', ownedCredits); 
+            safeSetText('totalCreditsCart', cartCredits);
+            safeSetText('enrolledCount', enrolledCourses.length);
+            safeSetText('creditsLeftDisplay', MAX_CREDITS - total);
+
+            const coreCategory = trackMapping[userTrack];
+            const coreCourses = allCourses.filter(c => c.category === coreCategory);
+            const ownedCore = enrolledCourses.filter(c => c.category === coreCategory);
+            const progress = coreCourses.length > 0 ? Math.round((ownedCore.length / coreCourses.length) * 100) : 0;
+            safeSetText('trackProgressDisplay', `${progress}%`);
+
+            const list = document.getElementById('backpackList');
+            if(list) {
+                list.innerHTML = myBackpack.length === 0 ? `<p class="text-center text-slate-400 text-sm mt-10">Empty.</p>` : 
+                myBackpack.map(c => `<div class="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-100 shadow-sm"><div class="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden shrink-0"><img src="${c.image}" class="w-full h-full object-cover"></div><div class="flex-1 min-w-0"><h5 class="text-sm font-bold text-slate-900 truncate">${c.title}</h5><p class="text-[10px] font-bold text-indigo-500 uppercase">${c.category}</p></div></div>`).join('');
+            }
+            updateChart();
+        }
+
+        function updateChart() {
+            const ctx = document.getElementById('skillRadar');
+            if(!ctx) return;
+            const context = ctx.getContext('2d');
+            const combined = [...enrolledCourses, ...myBackpack];
+            const data = ["Coding Languages", "Core CS", "Web Dev", "AI & Data", "Cloud & Sec"].map(cat => combined.filter(c => c.category === cat).length);
+            if (!radarChart) {
+                radarChart = new Chart(context, {
+                    type: 'radar',
+                    data: { labels: ["Coding", "CS", "Web", "AI", "Cloud"], datasets: [{ label: 'Credits', data: data, backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: '#6366f1', pointBackgroundColor: '#fff', borderWidth: 3 }] },
+                    options: { animation: false, scales: { r: { beginAtZero: true, suggestedMax: 4, ticks: { display: false } } }, plugins: { legend: { display: false } }, maintainAspectRatio: false }
+                });
+                return;
+            }
+            radarChart.data.datasets[0].data = data;
+            radarChart.update('none');
+        }
+
+        // Change the existing python() function
+function python() {
+    // Show the level selection modal instead of redirecting
+    const modal = document.getElementById('pythonLevelModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+// Add this new function to handle the selection
+function selectPythonLevel(level) {
+    // Save selection to localStorage so other pages can see it
+    localStorage.setItem('selected_python_level', level);
+    
+    // Optional: Save to Firebase if you want it to persist across devices
+    const user = firebase.auth().currentUser;
+    if (user) {
+        db.collection('students').doc(user.email).update({
+            pythonLevel: level
+        });
+    }
+
+    // Redirect to the hub
+    window.location.href = 'pythonhub.html';
+}
+        function initializeCoachFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('coach') === 'open') {
+                const prompt = params.get('prompt') || `Build a career roadmap for my ${userTrack || 'current'} track using the courses in my learning hub.`;
+                setTimeout(() => openCareerCoach(prompt), 250);
+            }
+        }
+        document.getElementById('chatToggleBtn').addEventListener('click', () => toggleChat());
+        document.getElementById('chatCloseBtn').addEventListener('click', () => toggleChat(false));
+        document.getElementById('chatSendBtn').addEventListener('click', sendChatMessage);
+        document.getElementById('chatInput').addEventListener('input', function() {
+            this.style.height = '44px';
+            this.style.height = `${Math.min(this.scrollHeight, 120)}px`;
+        });
+        document.getElementById('chatInput').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        });
+        function toggleBackpack() { document.getElementById('backpackDrawer').classList.toggle('translate-x-full'); }
+        function showToast(msg, type) { const c = document.getElementById('toastContainer'); const t = document.createElement('div'); const col = type === 'success' ? 'emerald' : (type === 'info' ? 'blue' : 'red'); const icn = type === 'success' ? 'check-circle-2' : (type === 'info' ? 'info' : 'trash-2'); t.className = `flex items-center gap-3 px-4 py-3.5 rounded-xl shadow-xl bg-white/90 backdrop-blur-md pointer-events-auto min-w-[240px] animate-[slideInRight_0.4s_ease-out]`; t.innerHTML = `<div class="text-${col}-500"><i data-lucide="${icn}" class="w-5 h-5"></i></div><span class="text-sm font-semibold text-slate-700">${msg}</span>`; c.appendChild(t); queueLucideRefresh(); setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(20px)'; setTimeout(()=>t.remove(),300); }, 3000); }
+        function openLogoutModal() { document.getElementById('logoutModal').classList.add('modal-active'); document.getElementById('logoutModalContent').classList.add('modal-content-active'); }
+        function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('modal-active'); document.getElementById('logoutModalContent').classList.remove('modal-content-active'); }
+        function confirmLogout() {
+            localStorage.setItem('sf_force_google_account_picker', '1');
+            auth.signOut().then(() => window.location.href='../auth-new.html');
+        }
+        function closeSuccessModal() { document.getElementById('successModal').classList.remove('modal-active'); }
+        function clearBackpack() { myBackpack = []; updateUI(); }
+        initializeCoachFromQuery();
+    </script>
+</body>
+</html>

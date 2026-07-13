@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillForge - Student Portal</title>
+    <link rel="stylesheet" href="window-controls.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-init.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #e8f2ff 0%, #f0f8ff 100%);
+            min-height: 100vh;
+            padding-top: 32px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: #4f46e5;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #4f46e5;
+        }
+
+        .admin-login {
+            color: #4f46e5;
+            font-weight: 600;
+        }
+
+        .main-container {
+            display: flex;
+            max-width: 1200px;
+            margin: 60px auto;
+            gap: 80px;
+            padding: 0 40px;
+        }
+
+        .left-section {
+            flex: 1;
+            padding-right: 40px;
+        }
+
+        .main-title {
+            font-size: 48px;
+            font-weight: 700;
+            color: #1a1a1a;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        .main-title .highlight {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .features {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            background: #4f46e5;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .feature-content h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 5px;
+        }
+
+        .feature-content p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .right-section {
+            width: 400px;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            background: white;
+        }
+
+        .search-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .trouble-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .trouble-link a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .trouble-link a:hover {
+            text-decoration: underline;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 8px 16px;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .tab.active {
+            background: white;
+            color: #4f46e5;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .auth-btn:hover {
+            background: #4338ca;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 16px 0;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e5e7eb;
+        }
+
+        .google-btn {
+            width: 100%;
+            padding: 11px;
+            background: white;
+            color: #374151;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .google-btn:hover {
+            border-color: #4f46e5;
+            box-shadow: 0 2px 8px rgba(79,70,229,0.15);
+        }
+        .google-btn svg { flex-shrink: 0; }
+
+        .error-message {
+            color: #ef4444;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .success-message {
+            color: #10b981;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">
+        SkillForge - Student Portal
+    </div>
+    
+    <div class="window-controls">
+        <div class="window-control minimize" onclick="minimizeWindow()">
+            <div class="minimize-icon"></div>
+        </div>
+        <div class="window-control maximize" onclick="maximizeWindow()">
+            <div class="maximize-icon"></div>
+        </div>
+        <div class="window-control close" onclick="closeWindow()">
+            <div class="close-icon"></div>
+        </div>
+    </div>
+
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">S</div>
+            SkillForge
+        </div>
+        <div class="nav-links">
+            <a href="#">Learning Paths</a>
+            <a href="#">Certifications</a>
+            <a href="#">Support</a>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="left-section">
+            <h1 class="main-title">
+                Student Skill<br>
+                <span class="highlight">Development Portal</span>
+            </h1>
+            <p class="subtitle">
+                Welcome to the centralized platform for academic upskilling. Log in with your institutional credentials to access assigned modules, track progress, and view college-specific leaderboards.
+            </p>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">📚</div>
+                    <div class="feature-content">
+                        <h3>Curriculum Mapped</h3>
+                        <p>Courses aligned with your semester.</p>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-content">
+                        <h3>Live Analytics</h3>
+                        <p>Track skill acquisition in real-time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-section">
+            <div class="login-header">
+                <h2>Student Login</h2>
+                <p>Enter your credentials to access your dashboard.</p>
+            </div>
+
+            <div class="auth-tabs">
+                <div class="tab active" onclick="switchTab('login')">Login</div>
+                <div class="tab" onclick="switchTab('signup')">Sign Up</div>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" class="form-input" id="loginEmail" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="auth-btn">Login</button>
+                <div class="divider">or</div>
+                <button type="button" class="google-btn" onclick="signInWithGoogle()">
+                    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                    Sign in with Google
+                </button>
+            </form>
+
+            <form id="signupForm" class="hidden">
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" class="form-input" id="signupName" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" class="form-input" id="signupEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" class="form-input" id="signupPassword" required>
+                </div>
+                <button type="submit" class="auth-btn">Create Account</button>
+                <div class="divider">or</div>
+                <button type="button" class="google-btn" onclick="signInWithGoogle()">
+                    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                    Sign up with Google
+                </button>
+            </form>
+
+            <div id="errorMessage" class="error-message"></div>
+            <div id="successMessage" class="success-message"></div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        function minimizeWindow() {
+            ipcRenderer.send('window-minimize');
+        }
+        
+        function maximizeWindow() {
+            ipcRenderer.send('window-maximize');
+        }
+        
+        function closeWindow() {
+            ipcRenderer.send('window-close');
+        }
+        
+        // Make functions global
+        window.minimizeWindow = minimizeWindow;
+        window.maximizeWindow = maximizeWindow;
+        window.closeWindow = closeWindow;
+
+        function initializeAuth() {
+            if (typeof firebase === 'undefined') {
+                console.error('Firebase not loaded');
+                return;
+            }
+            
+            try {
+                // Initialize Firebase Auth
+                const auth = firebase.auth();
+                console.log('Firebase Auth initialized');
+                
+                window.switchTab = function(tab) {
+                    const tabs = document.querySelectorAll('.tab');
+                    const loginForm = document.getElementById('loginForm');
+                    const signupForm = document.getElementById('signupForm');
+                    
+                    tabs.forEach(t => t.classList.remove('active'));
+                    
+                    if (tab === 'login') {
+                        tabs[0].classList.add('active');
+                        loginForm.classList.remove('hidden');
+                        signupForm.classList.add('hidden');
+                    } else {
+                        tabs[1].classList.add('active');
+                        signupForm.classList.remove('hidden');
+                        loginForm.classList.add('hidden');
+                    }
+                    
+                    clearMessages();
+                }
+
+                function showError(message) {
+                    document.getElementById('errorMessage').textContent = message;
+                    document.getElementById('successMessage').textContent = '';
+                }
+
+                function showSuccess(message) {
+                    document.getElementById('successMessage').textContent = message;
+                    document.getElementById('errorMessage').textContent = '';
+                }
+
+                function clearMessages() {
+                    document.getElementById('errorMessage').textContent = '';
+                    document.getElementById('successMessage').textContent = '';
+                }
+
+                async function syncUserProfile(user, fallbackName = '') {
+                    const db = firebase.firestore();
+                    const resolvedName = user.displayName || fallbackName || (user.email ? user.email.split('@')[0] : 'Scholar');
+
+                    if (!user.displayName && resolvedName) {
+                        await user.updateProfile({ displayName: resolvedName });
+                    }
+
+                    localStorage.setItem('sf_user_email', user.email || '');
+                    localStorage.setItem('sf_user_name', resolvedName);
+
+                    try {
+                        await db.collection('users').doc(user.uid).set({
+                            displayName: resolvedName,
+                            email: user.email || '',
+                            leaderboardXp: 980,
+                            courseCompletion: 68,
+                            studyBalance: 68,
+                            restBalance: 67,
+                            sleepBalance: 52,
+                            roadmapReadiness: 78,
+                            focusIntensity: 72,
+                            cognitiveLoad: 'Low',
+                            mindDensity: 'Stretch in 12m',
+                            clarityPercent: 94,
+                            currentMajor: 'Advanced Cognitive Architectures',
+                            currentMajorDescription: 'Exploring the intersection of neural networks and human semantic memory systems.',
+                            semesterProgress: 82,
+                            nextMilestone: 'Master of Architecture (+400 XP)',
+                            insightCopy: 'Steady daily progress',
+                            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+
+                        return { profileSynced: true, resolvedName };
+                    } catch (error) {
+                        console.error('Profile sync failed after sign-in:', error);
+                        return { profileSynced: false, resolvedName, error };
+                    }
+                }
+
+                auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        localStorage.setItem('sf_user_email', user.email || '');
+                        localStorage.setItem('sf_user_name', user.displayName || (user.email ? user.email.split('@')[0] : 'Scholar'));
+                        window.location.replace('navigation.html');
+                    }
+                });
+
+                // Google Sign-In
+                window.signInWithGoogle = async function() {
+                    try {
+                        showSuccess('Opening Google sign-in...');
+                        const result = await ipcRenderer.invoke('google-sign-in');
+                        if (result && result.accessToken) {
+                            const credential = firebase.auth.GoogleAuthProvider.credential(null, result.accessToken);
+                            const userCredential = await auth.signInWithCredential(credential);
+                            const syncResult = await syncUserProfile(userCredential.user);
+                            showSuccess(syncResult.profileSynced
+                                ? 'Google sign-in successful! Redirecting...'
+                                : 'Google sign-in successful. Profile sync is limited, but you can continue.');
+                            window.location.replace('navigation.html');
+                        }
+                    } catch (error) {
+                        if (error.message !== 'Auth window closed') {
+                            showError('Google sign-in failed: ' + error.message);
+                        } else {
+                            clearMessages();
+                        }
+                    }
+                };
+
+                // Login form handler
+                document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('loginEmail').value;
+                    const password = document.getElementById('loginPassword').value;
+
+                    try {
+                        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                        const syncResult = await syncUserProfile(userCredential.user);
+                        showSuccess(syncResult.profileSynced
+                            ? 'Login successful! Redirecting...'
+                            : 'Login successful. Profile sync is limited, but you can continue.');
+                        window.location.replace('navigation.html');
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        showError(error.message);
+                    }
+                });
+
+                // Signup form handler
+                document.getElementById('signupForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const name = document.getElementById('signupName').value;
+                    const email = document.getElementById('signupEmail').value;
+                    const password = document.getElementById('signupPassword').value;
+
+                    try {
+                        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                        await userCredential.user.updateProfile({ displayName: name });
+                        const syncResult = await syncUserProfile(userCredential.user, name);
+                        showSuccess(syncResult.profileSynced
+                            ? 'Account created successfully! Redirecting...'
+                            : 'Account created. Profile sync is limited, but you can continue.');
+                        window.location.replace('navigation.html');
+                    } catch (error) {
+                        console.error('Signup error:', error);
+                        showError(error.message);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                document.getElementById('errorMessage').textContent = 'Firebase initialization failed. Please check setup.';
+            }
+        }
+        
+        function bootAuth() {
+            if (typeof firebase !== 'undefined') {
+                initializeAuth();
+                return;
+            }
+            let attempts = 0;
+            const maxAttempts = 20;
+            const retryTimer = setInterval(() => {
+                attempts += 1;
+                if (typeof firebase !== 'undefined') {
+                    clearInterval(retryTimer);
+                    initializeAuth();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(retryTimer);
+                    document.getElementById('errorMessage').textContent = 'Firebase failed to load. Please restart the app.';
+                }
+            }, 100);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootAuth);
+        } else {
+            bootAuth();
+        }
+    </script>
+</body>
+</html>
